@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Green Palace | Daily Kitchen & Bar Report Builder</title>
+<style>
+:root{--green:#245b3c;--green2:#eaf3ed;--ink:#1f2937;--muted:#667085;--line:#e5e7eb;--bg:#f3f5f7;--blue:#426b91;--amber:#fff6df}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:14px/1.45 Arial,Helvetica,sans-serif;color:var(--ink)}
+header{background:var(--green);color:#fff;padding:22px max(20px,calc((100% - 1180px)/2))}
+header h1{margin:0;font-size:23px}header p{margin:5px 0 0;color:#d9e9df}
+main{max-width:1180px;margin:22px auto;padding:0 18px 40px}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 2px 8px #1018280a}
+h2{font-size:17px;margin:0 0 12px}.hint{font-size:12px;color:var(--muted);margin:5px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field label{display:block;font-weight:700;font-size:12px;margin-bottom:6px}.field input,.field textarea,.field select{width:100%;border:1px solid #cfd4dc;border-radius:7px;padding:10px;font:inherit;background:white}.field textarea{min-height:112px;resize:vertical}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}button{border:0;border-radius:7px;padding:10px 15px;background:var(--green);color:#fff;font-weight:700;cursor:pointer}button.secondary{background:#eef2f6;color:#263445;border:1px solid #d8dee6}button:disabled{opacity:.45;cursor:not-allowed}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stat{background:#f8faf9;border:1px solid var(--line);border-radius:8px;padding:12px}.stat small{display:block;color:var(--muted)}.stat strong{font-size:20px;display:block;margin-top:4px}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#f0f4f1;text-align:left;padding:9px;white-space:nowrap}td{padding:7px 9px;border-bottom:1px solid var(--line)}td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}td select{padding:6px;border:1px solid #ccd3da;border-radius:5px;background:white;max-width:130px}
+.status{padding:9px 11px;border-radius:7px;background:#eef6f0;color:#245b3c;font-size:12px;margin-top:10px}.warn{background:var(--amber);color:#805b12}.hidden{display:none!important}.right{text-align:right}.small{font-size:11px;color:var(--muted)}
+/* printable report */
+#printArea{display:none}
+@page{size:A4 portrait;margin:10mm}
+@media print{
+  html,body{width:210mm!important;margin:0!important;padding:0!important;background:#fff!important}
+  body{color:#1f2937;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .no-print,header,main{display:none!important}
+  #printArea{display:block!important;color:#202a35;width:190mm!important}
+  .print-page{
+    width:190mm!important;height:277mm!important;min-height:277mm!important;max-height:277mm!important;
+    margin:0!important;padding:0 0 12mm!important;position:relative!important;overflow:hidden!important;
+    page-break-after:always!important;break-after:page!important;box-sizing:border-box!important;
+  }
+  .print-page:last-child{page-break-after:auto!important;break-after:auto!important}
+  .p-top{height:4px;background:#245b3c;margin:0 0 7mm!important;width:100%}
+  .p-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #e3e9e5;padding-bottom:5mm}
+  .p-brand{font-size:19px;font-weight:800;letter-spacing:.2px;color:#183b2a}
+  .p-sub{font-size:8px;color:#667085;letter-spacing:1.3px;margin-top:3px}
+  .p-meta{text-align:right;font-size:8.5px;color:#667085;line-height:1.65}
+  .print-page h1{font-size:23px;line-height:1.15;margin:7mm 0 2mm;color:#183b2a}
+  .p-desc{font-size:9px;color:#667085;margin-bottom:5mm}
+  .p-cards{display:flex;gap:3mm;margin:0 0 6mm}
+  .p-card{flex:1;border:1px solid #dfe7e1;border-radius:5px;padding:3mm 3.5mm;background:#f8fbf9!important}
+  .p-card small{display:block;color:#667085;font-size:7px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:1mm}
+  .p-card b{font-size:15px;color:#183b2a}
+  #printArea table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.2px;line-height:1.15}
+  #printArea thead{display:table-header-group}
+  #printArea tr{break-inside:avoid!important;page-break-inside:avoid!important}
+  #printArea th{background:#244b36!important;color:#fff!important;padding:2.2mm 2.5mm!important;font-size:7.5px;letter-spacing:.35px;text-transform:uppercase}
+  #printArea td{padding:1.35mm 2.5mm!important;border-bottom:1px solid #e8edf0;vertical-align:middle}
+  #printArea tbody tr:nth-child(even){background:#f7faf8!important}
+  #printArea td:nth-child(2),#printArea td:nth-child(3),
+  #printArea th:nth-child(2),#printArea th:nth-child(3){text-align:right;font-variant-numeric:tabular-nums}
+  #printArea tfoot td{font-weight:800;background:#eaf3ed!important;border-top:1.5px solid #245b3c;padding:2.4mm 2.5mm!important}
+  .p-note{margin-top:5mm;padding:3mm 3.5mm;background:#f6f8fa!important;border-left:2px solid #98a2b3;font-size:7.5px;line-height:1.4;color:#667085}
+  .p-footer{position:absolute;bottom:0;left:0;right:0;border-top:1px solid #dfe5e1;padding-top:2.2mm;font-size:7px;color:#87918b;display:flex;justify-content:space-between}
+  .hero{background:#183b2a!important;color:#fff!important;padding:8mm;border-radius:6px;margin:7mm 0}
+  .hero b{font-size:27px;display:block;margin-top:2mm}
+  .split{display:flex;gap:4mm;margin:5mm 0 8mm}
+  .split>div{flex:1;border:1px solid #dfe7e1;border-radius:6px;padding:5mm;background:#f8fbf9!important}
+  .split span{font-size:9px;color:#667085}
+  .split strong{display:block;font-size:19px;color:#183b2a;margin:2mm 0}
+  .split small{font-size:8px;color:#667085}
+  .print-page h3{color:#344b3d}
+  .print-page>div[style*="display:flex"]{margin-top:22mm!important}
+}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header class="no-print"><h1>Green Palace Hotel</h1><p>Daily Kitchen & Bar Sales Report Builder</p></header>
+<main class="no-print">
+ <section class="panel">
+  <h2>1. Import daily sales report</h2>
+  <p class="hint">Upload an Excel (.xlsx, .xls) or CSV sales summary, or paste the report table. Expected columns: Item Name, Total Sold (Qty), Total Revenue. Category is optional.</p>
+  <div class="grid">
+   <div class="field"><label>Daily sales report (Excel / CSV)</label><input type="file" id="salesFile" accept=".csv,.txt,.xlsx,.xls"></div>
+   <div class="field"><label>Report date</label><input type="date" id="reportDate"></div>
+  </div>
+  <div class="field" style="margin-top:12px"><label>Or paste tabular report (copy directly from Excel / report)</label><textarea id="paste" placeholder="Category    Item Name    Total Sold (Qty)    Total Revenue&#10;Kitchen     Chicken Thali    4    1800"></textarea></div>
+  <div class="actions"><button id="loadPaste">Load pasted report</button><button class="secondary" id="clearPaste">Clear</button></div>
+  <div id="loadStatus" class="status hidden"></div>
+ </section>
+ <section class="panel">
+  <h2>2. Add menu master (recommended)</h2>
+  <p class="hint">Upload your menu in Excel (.xlsx, .xls) or CSV format to help match item names and menu prices. Menu categories such as “General” do not automatically determine the department; uncertain items are flagged for your review.</p>
+  <div class="field"><label>Menu master (Excel / CSV, optional)</label><input type="file" id="menuFile" accept=".csv,.txt,.xlsx,.xls"></div>
+  <div id="menuStatus" class="small" style="margin-top:8px">No menu loaded.</div>
+ </section>
+ <section class="panel">
+  <h2>3. Review and confirm department classification</h2>
+  <p class="hint">Auto-classification is a suggestion. Change any item using the Department dropdown. “Needs review” items are excluded from department totals until assigned.</p>
+  <div class="grid">
+   <div class="field"><label>Default treatment for tea, coffee and hot drinks</label><select id="hotRule"><option value="review">Needs review (recommended)</option><option value="kitchen">Kitchen</option><option value="bar">Bar</option></select></div>
+   <div class="field"><label>Unmatched / ambiguous item treatment</label><select id="unknownRule"><option value="review">Needs review (recommended)</option><option value="kitchen">Kitchen</option><option value="bar">Bar</option></select></div>
+  </div>
+  <div id="reviewSummary" class="small" style="margin:10px 0">Import a sales report to see items here.</div>
+  <div class="table-wrap"><table id="itemsTable"><thead><tr><th>Item</th><th>Source category</th><th class="num">Qty</th><th class="num">Revenue</th><th>Menu match / price</th><th>Department</th></tr></thead><tbody><tr><td colspan="6" class="small">No sales data loaded.</td></tr></tbody></table></div>
+  <div class="actions"><button id="reclassify" class="secondary">Re-run suggestions</button><button id="generate" disabled>Prepare printable report</button></div>
+  <div id="reportStatus" class="status hidden"></div>
+ </section>
+ <section class="panel">
+  <h2>4. Local intelligence memory</h2>
+  <p class="hint">This browser can remember your department corrections, menu master, last report date and recent report summaries on this computer. Learned item rules are reused on future uploads.</p>
+  <div id="memoryStatus" class="status">Checking this browser's saved memory…</div>
+  <div id="historyList" class="small" style="margin-top:10px"></div>
+  <div class="actions"><button class="secondary" id="restoreLast" disabled>Restore last imported sales</button><button class="secondary" id="clearMemory">Clear saved local memory</button></div>
+  <p class="small">Saved only in this browser's local storage; it is not uploaded to a server. Clearing browser site data or using another browser/device may remove or hide it.</p>
+ </section>
+ <section class="panel">
+  <h2>5. How the program classifies items</h2>
+  <p class="hint">It first checks known menu categories, then uses item-name rules for food, alcoholic drinks, soft drinks, water and cigarettes. Tea/coffee and ambiguous “General” menu items are sent for review unless you set a default. Always verify suggestions before printing.</p>
+ </section>
+</main>
+<div id="printArea"></div>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let sales=[], menu=[], menuMap=new Map(), generated=false;
+const MEMORY_KEY='greenPalaceSalesBuilder.memory.v2';
+let memory={learned:{},lastDate:'',menu:[],lastSales:[],history:[],hotRule:'review',unknownRule:'review'};
+function loadMemory(){
+ try{const raw=localStorage.getItem(MEMORY_KEY);if(raw){const parsed=JSON.parse(raw);memory={...memory,...parsed};}}
+ catch(e){console.warn('Local memory could not be read',e)}
+}
+function saveMemory(){
+ try{localStorage.setItem(MEMORY_KEY,JSON.stringify(memory));renderMemoryStatus();return true}
+ catch(e){showStatus('memoryStatus','Could not save memory. Browser storage may be full or disabled.',true);return false}
+}
+function renderMemoryStatus(){
+ const learned=Object.keys(memory.learned||{}).length;
+ const history=memory.history||[];
+ $('memoryStatus').textContent=`Saved on this computer: ${learned} learned item classifications · ${memory.menu?.length||0} menu items · ${history.length} recent report summaries${memory.lastDate?' · Last report date: '+memory.lastDate:''}.`;
+ const restore=$('restoreLast');if(restore)restore.disabled=!(memory.lastSales&&memory.lastSales.length);
+ $('historyList').innerHTML=history.length?'<strong>Recent saved reports</strong><br>'+history.slice(0,8).map(h=>`${esc(h.date)} — Kitchen ${money(h.kitchen)} · Bar ${money(h.bar)} · Total ${money(h.total)}`).join('<br>'):'No generated report history saved yet.';
+}
+loadMemory();
+const money=n=>'Rs. '+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const norm=s=>String(s||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+function parseCSV(text){
+ let rows=[],row=[],cell='',q=false;
+ text=String(text).replace(/^\uFEFF/,'');
+ for(let i=0;i<text.length;i++){let c=text[i],n=text[i+1];
+  if(c==='"'&&q&&n==='"'){cell+='"';i++}
+  else if(c==='"'){q=!q}
+  else if(c===','&&!q){row.push(cell);cell=''}
+  else if((c==='\n'||c==='\r')&&!q){if(c==='\r'&&n==='\n')i++;row.push(cell);if(row.some(x=>x.trim()))rows.push(row);row=[];cell=''}
+  else cell+=c;
+ }
+ row.push(cell);if(row.some(x=>x.trim()))rows.push(row);return rows;
+}
+function parseDelimited(text){
+ let lines=text.trim().split(/\r?\n/).filter(x=>x.trim());if(!lines.length)return [];
+ let delim=(lines[0].includes('\t')?'\t':',');
+ if(delim==='\t')return lines.map(l=>l.split('\t').map(x=>x.trim()));
+ return parseCSV(text);
+}
+function headerIndex(headers,patterns){return headers.findIndex(h=>patterns.some(p=>norm(h)===norm(p)||norm(h).includes(norm(p))))}
+function parseSales(rows){
+ if(rows.length<2)throw Error('No data rows found.');
+ let h=rows[0],ix={
+  category:headerIndex(h,['Category','Item Category']),
+  item:headerIndex(h,['Item Name','Product Name','Item','Menu Item','Title']),
+  qty:headerIndex(h,['Total Sold (Qty)','Total Sold','Qty Sold','Quantity','Qty']),
+  revenue:headerIndex(h,['Total Revenue','Revenue','Amount','Total Amount','Valuation'])
+ };
+ if(ix.item<0||ix.qty<0||ix.revenue<0)throw Error('Required columns not found. Need Item Name, Total Sold (Qty), Total Revenue.');
+ let out=[];
+ for(let r of rows.slice(1)){let item=(r[ix.item]||'').trim();if(!item)continue;
+  let qty=Number(String(r[ix.qty]||'0').replace(/,/g,'')),rev=Number(String(r[ix.revenue]||'0').replace(/[,\s]/g,'').replace(/NPR|Rs\.?/gi,''));
+  if(!Number.isFinite(qty)||!Number.isFinite(rev))continue;
+  out.push({item,category:ix.category>=0?(r[ix.category]||'').trim():'',qty,revenue:rev,dept:'review',menuMatch:null,menuPrice:null,priceFlag:''});
+ }
+ return out;
+}
+function classify(item,cat){
+ let c=norm(cat),n=norm(item);
+ if(memory.learned&&memory.learned[n])return memory.learned[n];
+ if(/cigarette|tobacco|smoking/.test(c))return 'bar';
+ if(/whisky|whiskey|rum|beer|wine|vodka|gin|brandy|alcohol|bar/.test(c))return 'bar';
+ if(/kitchen|food|thakali|appitizer|appetizer|salad|dessert|snack/.test(c))return 'kitchen';
+ if(/cigarette|sikharice|surya red/.test(n))return 'bar';
+ if(/tuborg|gorkha|xtreme|old durbar|signature|8848|whisky|whiskey|vodka|rum|beer|wine|gin|brandy|redbull|coke|pepsi|sprite|fanta|dew|7up|water|juice|appy/.test(n))return 'bar';
+ if(/tea|coffee|hot lemon|lemon tea/.test(n))return $('hotRule').value;
+ if(/khana|thali|momo|mo mo|chicken|mutton|fish|pork|buff|beef|egg|omelet|omlete|roti|rice|noodle|noodles|fry|curry|salad|chatpate|sandheko|papad|sausage|wings|lollipop|tass|bread|keema|paratha|alu|paneer|dal|dhido|snack|soup|pizza|pasta|fries/.test(n))return 'kitchen';
+ return $('unknownRule').value;
+}
+function attachMenu(){
+ menuMap=new Map(menu.map(m=>[norm(m.title),m]));
+ for(let s of sales){
+  let m=menuMap.get(norm(s.item));
+  if(!m){ // close-ish exact normalized prefix/contains match
+   m=menu.find(x=>norm(x.title)===norm(s.item)||norm(s.item)===norm(x.title));
+  }
+  s.menuMatch=m?m.title:null;s.menuPrice=m&&Number.isFinite(Number(m.price))?Number(m.price):null;
+  s.priceFlag='';
+  if(m&&s.qty>0&&s.menuPrice!==null){let unit=s.revenue/s.qty;if(Math.abs(unit-s.menuPrice)>0.02)s.priceFlag='Rate differs';}
+  s.dept=classify(s.item,s.category);
+ }
+}
+function renderRows(){
+ let tb=$('itemsTable').querySelector('tbody');tb.innerHTML='';
+ sales.forEach((s,i)=>{
+  let tr=document.createElement('tr');
+  let match=s.menuMatch?`${s.menuMatch}${s.menuPrice!==null?' · '+money(s.menuPrice):''}`:'No exact match';
+  if(s.priceFlag)match+=' ⚠ '+s.priceFlag;
+  tr.innerHTML=`<td>${esc(s.item)}</td><td>${esc(s.category||'—')}</td><td class="num">${s.qty}</td><td class="num">${money(s.revenue)}</td><td>${esc(match)}</td><td><select data-i="${i}"><option value="kitchen">Kitchen</option><option value="bar">Bar</option><option value="review">Needs review</option></select></td>`;
+  tr.querySelector('select').value=s.dept;tr.querySelector('select').addEventListener('change',e=>{sales[i].dept=e.target.value;if(e.target.value==='kitchen'||e.target.value==='bar'){memory.learned[norm(sales[i].item)]=e.target.value;saveMemory()}updateSummary()});
+  tb.appendChild(tr);
+ });
+ updateSummary();
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function updateSummary(){
+ let k=sales.filter(x=>x.dept==='kitchen'),b=sales.filter(x=>x.dept==='bar'),r=sales.filter(x=>x.dept==='review');
+ let sum=a=>a.reduce((v,x)=>v+x.revenue,0),qty=a=>a.reduce((v,x)=>v+x.qty,0);
+ $('reviewSummary').textContent=`${sales.length} sales lines · Kitchen: ${k.length} lines / ${qty(k)} qty / ${money(sum(k))} · Bar: ${b.length} lines / ${qty(b)} qty / ${money(sum(b))} · Needs review: ${r.length} lines`;
+ $('generate').disabled=!sales.length||r.length>0;
+ $('generate').textContent=r.length?'Assign all items to Kitchen or Bar to print':'Prepare printable report';
+}
+function showStatus(id,msg,warn=false){$(id).textContent=msg;$(id).classList.remove('hidden','warn');if(warn)$(id).classList.add('warn')}
+async function ensureXLSX(){
+ if(window.XLSX)return;
+ const urls=['https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'];
+ for(const url of urls){
+  try{await new Promise((resolve,reject)=>{const sc=document.createElement('script');sc.src=url;sc.onload=resolve;sc.onerror=()=>reject(Error('CDN unavailable'));document.head.appendChild(sc)});if(window.XLSX)return;}
+  catch(e){}
+ }
+ throw Error('Excel reader could not load. Connect to the internet, refresh, and try again. CSV upload remains available.');
+}
+async function fileToRows(file,kind='sales'){
+ const ext=(file.name.split('.').pop()||'').toLowerCase();
+ if(ext==='xlsx'||ext==='xls'){
+  await ensureXLSX();
+  const data=await file.arrayBuffer();
+  const wb=XLSX.read(data,{type:'array',cellDates:false});
+  if(!wb.SheetNames.length)throw Error('No worksheet found in this Excel file.');
+  let fallback=null;
+  for(const name of wb.SheetNames){
+   const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:false,defval:''});
+   if(!fallback)fallback=rows;
+   const headers=rows[0]||[];
+   const hasItem=headerIndex(headers,kind==='menu'?['Title','Item Name','Product Name']:['Item Name','Product Name','Item','Menu Item','Title'])>=0;
+   const hasQty=kind==='menu'||headerIndex(headers,['Total Sold (Qty)','Total Sold','Qty Sold','Quantity','Qty'])>=0;
+   const hasRevenue=kind==='menu'||headerIndex(headers,['Total Revenue','Revenue','Amount','Total Amount','Valuation'])>=0;
+   if(hasItem&&hasQty&&hasRevenue)return rows;
+  }
+  if(fallback&&fallback.length)return fallback;
+  throw Error('No usable worksheet found in the Excel file.');
+ }
+ return parseDelimited(await file.text());
+}
+function loadSalesRows(rows){sales=parseSales(rows);attachMenu();renderRows();memory.lastSales=sales;memory.lastDate=$('reportDate').value||memory.lastDate;saveMemory();showStatus('loadStatus',`Loaded ${sales.length} item rows successfully. Review the suggested departments below.`);generated=false}
+$('salesFile').addEventListener('change',async e=>{let f=e.target.files[0];if(!f)return;try{loadSalesRows(await fileToRows(f,'sales'))}catch(err){showStatus('loadStatus',err.message,true)}});
+$('loadPaste').onclick=()=>{try{loadSalesRows(parseDelimited($('paste').value))}catch(err){showStatus('loadStatus',err.message,true)}};
+$('clearPaste').onclick=()=>{$('paste').value=''};
+$('menuFile').addEventListener('change',async e=>{
+ let f=e.target.files[0];if(!f)return;
+ try{let rows=await fileToRows(f,'menu');if(rows.length<2)throw Error('Menu file is empty.');
+ let h=rows[0],ti=headerIndex(h,['Title','Item Name','Product Name']),ci=headerIndex(h,['Category']),pi=headerIndex(h,['Price','Rate']);
+ if(ti<0)throw Error('Menu needs a Title or Item Name column.');
+ menu=rows.slice(1).filter(r=>r[ti]).map(r=>({title:r[ti],category:ci>=0?r[ci]:'',price:pi>=0?Number(String(r[pi]).replace(/,/g,'')):NaN}));
+ memory.menu=menu;saveMemory();
+ $('menuStatus').textContent=`Loaded ${menu.length} menu items. Exact item matches and price checks are enabled and saved locally.`;
+ if(sales.length){attachMenu();renderRows()}
+ }catch(err){$('menuStatus').textContent=err.message}
+});
+$('hotRule').onchange=()=>{if(sales.length){attachMenu();renderRows()}};
+$('unknownRule').onchange=()=>{if(sales.length){attachMenu();renderRows()}};
+$('reclassify').onclick=()=>{attachMenu();renderRows();showStatus('reportStatus','Suggestions recalculated. Please check each department before printing.')};
+function totals(a){return {qty:a.reduce((s,x)=>s+x.qty,0),rev:a.reduce((s,x)=>s+x.revenue,0)}}
+function makeTable(a){return `<table><thead><tr><th>Item name</th><th style="text-align:right">Qty sold</th><th style="text-align:right">Revenue (NPR)</th></tr></thead><tbody>${a.map(x=>`<tr><td>${esc(x.item)}</td><td style="text-align:right">${x.qty}</td><td style="text-align:right">${x.revenue.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`).join('')}</tbody><tfoot><tr><td>TOTAL</td><td style="text-align:right">${totals(a).qty}</td><td style="text-align:right">${totals(a).rev.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr></tfoot></table>`}
+function page(title,dept,arr,num,note=''){let t=totals(arr),date=$('reportDate').value||new Date().toISOString().slice(0,10);return `<section class="print-page"><div class="p-top"></div><div class="p-head"><div><div class="p-brand">GREEN PALACE HOTEL</div><div class="p-sub">DAILY SALES · DEPARTMENT REPORT</div></div><div class="p-meta">${date}<br>Page ${num} of 3</div></div><h1>${title}</h1><div class="p-desc">Item-wise sales summary · ${dept}</div><div class="p-cards"><div class="p-card"><small>Revenue</small><b>${money(t.rev)}</b></div><div class="p-card"><small>Quantity sold</small><b>${t.qty}</b></div><div class="p-card"><small>Sales lines</small><b>${arr.length}</b></div></div>${makeTable(arr)}${note?`<div class="p-note">${note}</div>`:''}<div class="p-footer"><span>Green Palace Hotel · Internal sales record</span><span>${title} · ${num}/3</span></div></section>`}
+$('generate').onclick=()=>{
+ let k=sales.filter(x=>x.dept==='kitchen'),b=sales.filter(x=>x.dept==='bar'),all=[...k,...b],kt=totals(k),bt=totals(b),at=totals(all);
+ let date=$('reportDate').value||new Date().toISOString().slice(0,10);
+ let contribution=at.rev?kt.rev/at.rev*100:0,barPct=100-contribution;
+ memory.lastDate=date;
+ memory.history=[{date,kitchen:kt.rev,bar:bt.rev,total:at.rev,qty:at.qty},...(memory.history||[]).filter(h=>h.date!==date)].slice(0,30);
+ memory.lastSales=sales;
+ saveMemory();
+ let notes='Classification was reviewed in the application. Menu price differences, where shown, are alerts for checking and do not automatically change reported revenue.';
+ $('printArea').innerHTML=page('Kitchen Sales Report','Kitchen',k,1,notes)+page('Bar Sales Report','Bar',b,2,notes)+
+ `<section class="print-page"><div class="p-top"></div><div class="p-head"><div><div class="p-brand">GREEN PALACE HOTEL</div><div class="p-sub">DAILY SALES · MANAGEMENT SUMMARY</div></div><div class="p-meta">${date}<br>Page 3 of 3</div></div><h1>Total Sales Summary</h1><div class="p-desc">Kitchen and Bar shown separately and combined</div><div class="hero"><div style="font-size:9px;opacity:.8;text-transform:uppercase">Total combined sales revenue</div><b>${money(at.rev)}</b></div><div class="split"><div><span>Kitchen sales</span><strong>${money(kt.rev)}</strong><small>${kt.qty} quantity · ${contribution.toFixed(1)}%</small></div><div><span>Bar sales</span><strong>${money(bt.rev)}</strong><small>${bt.qty} quantity · ${barPct.toFixed(1)}%</small></div></div><h3 style="font-size:11px;margin-top:22px">Department reconciliation</h3><table><thead><tr><th>Department</th><th style="text-align:right">Quantity</th><th style="text-align:right">Revenue (NPR)</th><th style="text-align:right">Contribution</th></tr></thead><tbody><tr><td>Kitchen</td><td style="text-align:right">${kt.qty}</td><td style="text-align:right">${kt.rev.toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td style="text-align:right">${contribution.toFixed(1)}%</td></tr><tr><td>Bar</td><td style="text-align:right">${bt.qty}</td><td style="text-align:right">${bt.rev.toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td style="text-align:right">${barPct.toFixed(1)}%</td></tr></tbody><tfoot><tr><td>GRAND TOTAL</td><td style="text-align:right">${at.qty}</td><td style="text-align:right">${at.rev.toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td style="text-align:right">100%</td></tr></tfoot></table><div class="p-note">Source: imported daily sales report. This is gross sales revenue, not profit. Department assignment is based on the suggestions and user corrections made before printing.</div><div style="display:flex;justify-content:space-between;margin-top:42px;font-size:9px"><div style="width:40%;border-top:1px solid #98a2b3;padding-top:6px">Prepared by</div><div style="width:40%;border-top:1px solid #98a2b3;padding-top:6px">Checked / Approved by</div></div><div class="p-footer"><span>Green Palace Hotel · Internal sales record</span><span>Total Sales Summary · 3/3</span></div></section>`;
+ showStatus('reportStatus','Report prepared. Report is formatted for A4 portrait. Choose A4 paper, Portrait orientation, Scale 100%, and enable Background graphics in the print dialog.');generated=true;
+ let btn=document.getElementById('printBtn');if(!btn){btn=document.createElement('button');btn.id='printBtn';btn.textContent='Print / Save as PDF';btn.style.marginTop='10px';btn.onclick=()=>window.print();$('reportStatus').after(btn)}btn.classList.remove('hidden');
+};
+$('reportDate').value=memory.lastDate||new Date().toISOString().slice(0,10);
+$('reportDate').addEventListener('change',()=>{memory.lastDate=$('reportDate').value;saveMemory()});
+$('hotRule').value=memory.hotRule||'review';$('unknownRule').value=memory.unknownRule||'review';
+$('hotRule').addEventListener('change',()=>{memory.hotRule=$('hotRule').value;saveMemory()});
+$('unknownRule').addEventListener('change',()=>{memory.unknownRule=$('unknownRule').value;saveMemory()});
+$('restoreLast').onclick=()=>{if(!memory.lastSales||!memory.lastSales.length)return;sales=memory.lastSales;attachMenu();renderRows();showStatus('loadStatus',`Restored ${sales.length} previously imported sales lines from this browser.`);};
+$('clearMemory').onclick=()=>{if(!confirm('Clear learned classifications, saved menu, date and report history from this browser?'))return;localStorage.removeItem(MEMORY_KEY);memory={learned:{},lastDate:'',menu:[],lastSales:[],history:[],hotRule:'review',unknownRule:'review'};menu=[];sales=[];$('reportDate').value=new Date().toISOString().slice(0,10);$('hotRule').value='review';$('unknownRule').value='review';renderMemoryStatus();renderRows();};
+if(memory.menu&&memory.menu.length){menu=memory.menu;$('menuStatus').textContent=`Restored ${menu.length} saved menu items from this browser.`;}
+renderMemoryStatus();
+</script>
+</body></html>

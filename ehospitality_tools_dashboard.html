@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eHospitality Tools</title>
+<style>
+:root{
+  --green:#2e7746;--green-dark:#205b35;--green-soft:#edf5ef;
+  --ink:#1d2a22;--muted:#68756d;--line:#e5ebe6;--surface:#fff;--bg:#f6f8f6;
+  --shadow:0 8px 24px rgba(24,55,34,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+.topbar{height:68px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 5vw}
+.brand{display:flex;align-items:center;gap:11px;font-weight:750;font-size:18px;letter-spacing:-.3px}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:var(--green);display:grid;place-items:center;color:white;font-weight:800}
+.brand span:last-child{color:var(--green)}
+main{max-width:1120px;margin:0 auto;padding:48px 28px 64px}
+.heading-row{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:28px}
+.eyebrow{font-size:11px;font-weight:750;letter-spacing:1.5px;color:var(--green);text-transform:uppercase;margin-bottom:9px}
+h1{font-size:clamp(28px,4vw,36px);letter-spacing:-1.1px;margin:0 0 9px;font-weight:750}
+.subtitle{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+.search{width:min(290px,100%);height:42px;border:1px solid var(--line);border-radius:10px;background:white;padding:0 13px;font:inherit;font-size:13px;outline:none}
+.search:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(46,119,70,.1)}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:28px 0 14px}
+.section-head h2{font-size:15px;margin:0;font-weight:700}
+.count{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.tool-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:21px;display:flex;flex-direction:column;min-height:190px;box-shadow:var(--shadow);transition:transform .18s ease,border-color .18s ease}
+.tool-card:hover{transform:translateY(-2px);border-color:#c8d9cc}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.tool-icon{width:42px;height:42px;border-radius:12px;background:var(--green-soft);color:var(--green);display:grid;place-items:center;flex:none}
+.tool-icon svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.status{font-size:10px;font-weight:700;color:#6b786f;background:#f1f4f1;border-radius:20px;padding:5px 8px;white-space:nowrap}
+.tool-card h3{font-size:16px;margin:16px 0 7px;letter-spacing:-.2px}
+.tool-card p{font-size:13px;line-height:1.55;color:var(--muted);margin:0 0 18px;max-width:480px}
+.card-bottom{margin-top:auto;display:flex;align-items:center;justify-content:space-between}
+.category{font-size:11px;color:#7b877f}
+.open-btn{border:0;background:var(--green);color:white;border-radius:8px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s}
+.open-btn:hover{background:var(--green-dark)}
+.empty{display:none;padding:30px;text-align:center;color:var(--muted);border:1px dashed #cbd7ce;border-radius:12px;background:white}
+footer{max-width:1120px;margin:0 auto;padding:0 28px 28px;color:#879189;font-size:11px}
+.modal-backdrop{position:fixed;inset:0;background:rgba(16,29,20,.38);display:none;align-items:center;justify-content:center;padding:20px;z-index:5}
+.modal{background:white;border-radius:16px;width:min(420px,100%);padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.18)}
+.modal h3{margin:0 0 8px;font-size:18px}
+.modal p{color:var(--muted);font-size:13px;line-height:1.6;margin:0 0 18px}
+.modal-actions{display:flex;justify-content:flex-end;gap:9px}
+.secondary-btn{border:1px solid var(--line);background:white;color:var(--ink);border-radius:8px;padding:9px 13px;font-weight:650;cursor:pointer}
+@media(max-width:640px){
+ main{padding:34px 18px 48px}.heading-row{align-items:stretch;flex-direction:column}.search{width:100%}
+ .grid{grid-template-columns:1fr;gap:12px}.tool-card{min-height:175px;padding:18px}
+ footer{padding:0 18px 22px}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="brand-mark">e</div><div>eHospitality <span>Tools</span></div></div>
+</header>
+<main>
+  <div class="heading-row">
+    <div>
+      <div class="eyebrow">Support workspace</div>
+      <h1>eHospitality Tools</h1>
+      <p class="subtitle">Quick access to utilities that help manage, validate and prepare your hospitality data.</p>
+    </div>
+    <input class="search" id="search" type="search" placeholder="Search tools..." aria-label="Search tools">
+  </div>
+  <div class="section-head"><h2>Available tools</h2><span class="count" id="count">6 tools</span></div>
+  <section class="grid" id="toolGrid">
+    <article class="tool-card" data-search="menu csv import formatter menu inventory">
+      <div class="card-top"><div class="tool-icon"><svg viewBox="0 0 24 24"><path d="M8 4h8l3 3v13H5V4h3Z"/><path d="M8 4v5h8V4M8 13h8M8 17h5"/></svg></div><span class="status">Utility</span></div>
+      <h3>Menu Import &amp; Formatter</h3><p>Prepare menu data for import, standardise categories and item details, and check CSV structure before uploading.</p>
+      <div class="card-bottom"><span class="category">Menu management</span><button class="open-btn" data-tool="Menu Import &amp; Formatter">Open tool&nbsp; ↗</button></div>
+    </article>
+    <article class="tool-card" data-search="daily sales report excel csv print">
+      <div class="card-top"><div class="tool-icon"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h17"/><path d="M8 15v-4M13 15V7M18 15V9"/></svg></div><span class="status">Utility</span></div>
+      <h3>Daily Sales Report Builder</h3><p>Turn daily sales exports into clear department-wise reports with totals and a print-ready A4 layout.</p>
+      <div class="card-bottom"><span class="category">Reports</span><button class="open-btn" data-tool="Daily Sales Report Builder">Open tool&nbsp; ↗</button></div>
+    </article>
+    <article class="tool-card" data-search="kot reconciliation kitchen order ticket sales cancelled">
+      <div class="card-top"><div class="tool-icon"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><path d="m3 6 1 1 2-2M3 12l1 1 2-2M3 18l1 1 2-2"/></svg></div><span class="status">Utility</span></div>
+      <h3>KOT Reconciliation</h3><p>Compare KOT totals with sales data, identify cancelled or unmatched items, and review quantity differences.</p>
+      <div class="card-bottom"><span class="category">Operations</span><button class="open-btn" data-tool="KOT Reconciliation">Open tool&nbsp; ↗</button></div>
+    </article>
+    <article class="tool-card" data-search="inventory csv validator stock item import">
+      <div class="card-top"><div class="tool-icon"><svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.7 7.5 4.2 7.5-4.2M12 21v-9.1"/></svg></div><span class="status">Utility</span></div>
+      <h3>Inventory Import Validator</h3><p>Check stock import files for missing fields, duplicate item codes and inconsistent units before upload.</p>
+      <div class="card-bottom"><span class="category">Inventory</span><button class="open-btn" data-tool="Inventory Import Validator">Open tool&nbsp; ↗</button></div>
+    </article>
+    <article class="tool-card" data-search="qr code generator table payment">
+      <div class="card-top"><div class="tool-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v2M17 20h4M20 18v3"/></svg></div><span class="status">Utility</span></div>
+      <h3>QR Code Generator</h3><p>Create QR codes for supported links or text, such as digital menus, service pages and payment instructions.</p>
+      <div class="card-bottom"><span class="category">Guest experience</span><button class="open-btn" data-tool="QR Code Generator">Open tool&nbsp; ↗</button></div>
+    </article>
+    <article class="tool-card" data-search="invoice receipt preview print">
+      <div class="card-top"><div class="tool-icon"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></div><span class="status">Utility</span></div>
+      <h3>Invoice &amp; Receipt Preview</h3><p>Preview print layouts and check common invoice or receipt details before using them in your live system.</p>
+      <div class="card-bottom"><span class="category">Billing</span><button class="open-btn" data-tool="Invoice &amp; Receipt Preview">Open tool&nbsp; ↗</button></div>
+    </article>
+  </section>
+  <div class="empty" id="empty">No tools match your search.</div>
+</main>
+<footer>eHospitality · Support tools workspace</footer>
+<div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <h3 id="modalTitle">Tool</h3>
+    <p id="modalText">This tool is ready to be connected to its page.</p>
+    <div class="modal-actions"><button class="secondary-btn" id="closeModal">Close</button></div>
+  </div>
+</div>
+<script>
+const search=document.getElementById('search');
+const cards=[...document.querySelectorAll('.tool-card')];
+const count=document.getElementById('count');
+const empty=document.getElementById('empty');
+search.addEventListener('input',()=>{
+  const q=search.value.trim().toLowerCase();let shown=0;
+  cards.forEach(card=>{const match=(card.dataset.search+' '+card.innerText).toLowerCase().includes(q);card.style.display=match?'flex':'none';if(match)shown++;});
+  count.textContent=shown+' tool'+(shown===1?'':'s');empty.style.display=shown?'none':'block';
+});
+const backdrop=document.getElementById('modalBackdrop');
+document.querySelectorAll('.open-btn').forEach(btn=>btn.addEventListener('click',()=>{
+  document.getElementById('modalTitle').textContent=btn.dataset.tool;
+  document.getElementById('modalText').textContent='The dashboard card is in place. Connect this button to the corresponding eHospitality support-tool page or URL to launch the tool.';
+  backdrop.style.display='flex';
+}));
+function closeModal(){backdrop.style.display='none'}
+document.getElementById('closeModal').addEventListener('click',closeModal);
+backdrop.addEventListener('click',e=>{if(e.target===backdrop)closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+</script>
+</body>
+</html>
