@@ -1,7 +1,7 @@
-// api/ask.js - Vercel Serverless Function with Rate Limiting & Gemini Interactions API
+// api/ask.js - Vercel Serverless Function powered by Groq
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1-minute window
-const MAX_REQUESTS_PER_WINDOW = 15;    // Max 15 requests per IP per minute
+const MAX_REQUESTS_PER_WINDOW = 20;    // Max 20 requests per IP per minute
 const rateLimitStore = new Map();
 
 function checkRateLimit(ip) {
@@ -34,29 +34,12 @@ function getClientIp(req) {
   return req.socket?.remoteAddress || 'unknown-client';
 }
 
-function extractInteractionText(data) {
-  if (typeof data?.output_text === 'string' && data.output_text.trim()) {
-    return data.output_text.trim();
-  }
-
-  if (Array.isArray(data?.outputs)) {
-    const textParts = data.outputs
-      .map(out => (typeof out?.text === 'string' ? out.text : ''))
-      .filter(Boolean);
-    if (textParts.length > 0) {
-      return textParts.join('\n').trim();
-    }
-  }
-
-  return '';
-}
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed. Use POST.' });
   }
 
-  // 1. Rate Limiting Check
+  // 1. IP Rate Limiting
   const clientIp = getClientIp(req);
   const rateLimit = checkRateLimit(clientIp);
 
@@ -66,64 +49,65 @@ export default async function handler(req, res) {
   if (!rateLimit.allowed) {
     res.setHeader('Retry-After', String(rateLimit.retryAfterSec));
     return res.status(429).json({
-      error: `Rate limit exceeded. Please wait ${rateLimit.retryAfterSec}s before sending another request.`
+      error: `Rate limit exceeded. Please wait ${rateLimit.retryAfterSec}s before retrying.`
     });
   }
 
-  // 2. Secret Key Retrieval
-  const apiKey = process.env.GEMINI_API_KEY;
+  // 2. Groq API Key Check
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return res.status(500).json({
-      error: 'GEMINI_API_KEY is not configured in Vercel environment variables.'
+      error: 'GROQ_API_KEY is not configured in Vercel environment variables.'
     });
   }
 
-  // 3. Request Validation
+  // 3. Request Body Validation
   const { question, shiftContext } = req.body || {};
   if (!question || typeof question !== 'string' || !question.trim()) {
     return res.status(400).json({ error: 'Question parameter is missing or empty.' });
   }
 
-  const prompt = `You are an operational audit assistant for Birta Green Palace analyzing KOT (Kitchen Order Ticket) and F&B reports.
-Answer the user's inquiry accurately and concisely using ONLY the provided shift data below.
+  const systemMessage = `You are an operational audit assistant for Birta Green Palace analyzing KOT (Kitchen Order Ticket) and F&B reports.
+Answer the user's inquiry accurately and concisely using ONLY the provided shift data.
 Do not invent or assume tokens, timestamps, rates, or items. Always specify exact KOT token numbers, table, and timestamps when referencing orders.
-If an item was cancelled/voided or never ordered, state that clearly.
+If an item was cancelled/voided or never ordered, state that clearly.`;
 
-=== SHIFT AUDIT CONTEXT ===
+  const userPrompt = `=== SHIFT AUDIT CONTEXT ===
 ${JSON.stringify(shiftContext || {}, null, 2)}
 
 === USER QUESTION ===
 ${question.trim()}`;
 
   try {
-    const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/interactions',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey
-        },
-        body: JSON.stringify({
-          model: 'gemini-3.8-flash',
-          input: prompt,
-          store: false
-        })
-      }
-    );
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemMessage },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.1,
+        max_tokens: 1024
+      })
+    });
 
     const data = await response.json();
     if (!response.ok) {
       return res.status(response.status).json({
-        error: data?.error?.message || 'Gemini Interactions API call failed.'
+        error: data?.error?.message || `Groq API error (${response.status})`
       });
     }
 
-    const answer = extractInteractionText(data) || 'No response returned by the model.';
+    const answer = data?.choices?.[0]?.message?.content || 'No response returned by Groq.';
     return res.status(200).json({ answer });
   } catch (err) {
     return res.status(500).json({
-      error: 'Failed to communicate with Gemini Interactions API: ' + (err.message || String(err))
+      error: 'Failed to communicate with Groq: ' + (err.message || String(err))
     });
   }
 }
