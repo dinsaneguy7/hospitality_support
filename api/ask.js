@@ -1,4 +1,4 @@
-// api/ask.js - Vercel Serverless Function with Rate Limiting & Gemini Integration
+// api/ask.js - Vercel Serverless Function with Rate Limiting & Gemini Interactions API
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1-minute window
 const MAX_REQUESTS_PER_WINDOW = 15;    // Max 15 requests per IP per minute
@@ -34,8 +34,24 @@ function getClientIp(req) {
   return req.socket?.remoteAddress || 'unknown-client';
 }
 
+function extractInteractionText(data) {
+  if (typeof data?.output_text === 'string' && data.output_text.trim()) {
+    return data.output_text.trim();
+  }
+
+  if (Array.isArray(data?.outputs)) {
+    const textParts = data.outputs
+      .map(out => (typeof out?.text === 'string' ? out.text : ''))
+      .filter(Boolean);
+    if (textParts.length > 0) {
+      return textParts.join('\n').trim();
+    }
+  }
+
+  return '';
+}
+
 export default async function handler(req, res) {
-  // Only accept POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed. Use POST.' });
   }
@@ -62,13 +78,12 @@ export default async function handler(req, res) {
     });
   }
 
-  // 3. Request Body Validation
+  // 3. Request Validation
   const { question, shiftContext } = req.body || {};
   if (!question || typeof question !== 'string' || !question.trim()) {
     return res.status(400).json({ error: 'Question parameter is missing or empty.' });
   }
 
-  // 4. Construct Prompt
   const prompt = `You are an operational audit assistant for Birta Green Palace analyzing KOT (Kitchen Order Ticket) and F&B reports.
 Answer the user's inquiry accurately and concisely using ONLY the provided shift data below.
 Do not invent or assume tokens, timestamps, rates, or items. Always specify exact KOT token numbers, table, and timestamps when referencing orders.
@@ -78,12 +93,11 @@ If an item was cancelled/voided or never ordered, state that clearly.
 ${JSON.stringify(shiftContext || {}, null, 2)}
 
 === USER QUESTION ===
-${question.trim()}
-`;
+${question.trim()}`;
 
   try {
     const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/interactions',
       {
         method: 'POST',
         headers: {
@@ -91,10 +105,9 @@ ${question.trim()}
           'x-goog-api-key': apiKey
         },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2
-          }
+          model: 'gemini-3.8-flash',
+          input: prompt,
+          store: false
         })
       }
     );
@@ -102,20 +115,15 @@ ${question.trim()}
     const data = await response.json();
     if (!response.ok) {
       return res.status(response.status).json({
-        error: data?.error?.message || 'Gemini API call failed.'
+        error: data?.error?.message || 'Gemini Interactions API call failed.'
       });
     }
 
-    const answer =
-      data?.candidates?.[0]?.content?.parts
-        ?.map(p => p.text)
-        .filter(Boolean)
-        .join('\n') || 'No response returned by the model.';
-
+    const answer = extractInteractionText(data) || 'No response returned by the model.';
     return res.status(200).json({ answer });
   } catch (err) {
     return res.status(500).json({
-      error: 'Failed to communicate with AI endpoint: ' + (err.message || String(err))
+      error: 'Failed to communicate with Gemini Interactions API: ' + (err.message || String(err))
     });
   }
 }
