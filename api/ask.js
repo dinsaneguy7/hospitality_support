@@ -1,15 +1,17 @@
-// api/ask.js - Vercel Serverless Function powered by Groq with model fallback & rate limiting
+// api/ask.js - Vercel Serverless Function strictly scoped to uploaded KOT & F&B reports
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1-minute window
 const MAX_REQUESTS_PER_WINDOW = 20;    // Max 20 requests per IP per minute
 const rateLimitStore = new Map();
 
-// Standard chat models in Groq's catalog (ordered by fast/reliable availability)
 const GROQ_MODEL_CANDIDATES = [
   'openai/gpt-oss-20b',
   'openai/gpt-oss-120b',
   'qwen/qwen3.8-27b'
 ];
+
+const OUT_OF_SCOPE_REPLY =
+  'I can only answer questions about the uploaded KOT and F&B reports (items, quantities, rates, revenue/valuation, tokens, timestamps, tables, servers, cancellations, and discrepancies).';
 
 function checkRateLimit(ip) {
   const now = Date.now();
@@ -41,6 +43,12 @@ function getClientIp(req) {
   return req.socket?.remoteAddress || 'unknown-client';
 }
 
+function hasShiftData(shiftContext) {
+  if (!shiftContext || typeof shiftContext !== 'object') return false;
+  const items = Array.isArray(shiftContext.items) ? shiftContext.items : [];
+  return items.length > 0;
+}
+
 async function callGroqModel(model, systemMessage, userPrompt, apiKey) {
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -54,7 +62,7 @@ async function callGroqModel(model, systemMessage, userPrompt, apiKey) {
         { role: 'system', content: systemMessage },
         { role: 'user', content: userPrompt }
       ],
-      temperature: 0.1,
+      temperature: 0,
       max_tokens: 1024
     })
   });
@@ -97,19 +105,25 @@ export default async function handler(req, res) {
     });
   }
 
-  // 3. Request Body Validation
+  // 3. Request & Shift Context Validation
   const { question, shiftContext } = req.body || {};
   if (!question || typeof question !== 'string' || !question.trim()) {
     return res.status(400).json({ error: 'Question parameter is missing or empty.' });
   }
 
-  const systemMessage = `You are an operational audit assistant for Birta Green Palace analyzing KOT (Kitchen Order Ticket) and F&B reports.
-Answer the user's inquiry accurately and concisely using ONLY the provided shift data.
-Do not invent or assume tokens, timestamps, rates, or items. Always specify exact KOT token numbers, table, and timestamps when referencing orders.
-If an item was cancelled/voided or never ordered, state that clearly.`;
+  if (!hasShiftData(shiftContext)) {
+    return res.status(200).json({ answer: OUT_OF_SCOPE_REPLY });
+  }
 
-  const userPrompt = `=== SHIFT AUDIT CONTEXT ===
-${JSON.stringify(shiftContext || {}, null, 2)}
+  const systemMessage = `You are a closed-domain audit assistant for KOT (Kitchen Order Ticket) and F&B (Food & Beverage) reports only.
+STRICT RULES:
+1. Answer ONLY questions about the provided KOT and F&B report data (items, categories, quantities, rates, KOT valuations, F&B revenues, KOT token numbers, order timestamps, tables, servers/waiters, completed vs. cancelled/voided status, and cross-check discrepancies between KOT and F&B).
+2. If the user's message is a greeting, general chat, creative writing, coding, trivia, or anything not about the uploaded KOT and F&B reports, do NOT answer it—respond with this exact sentence:
+"${OUT_OF_SCOPE_REPLY}"
+3. Use ONLY facts present in the provided shift data. Never guess or invent token numbers, timestamps, items, or amounts. If an item or detail is not in the provided data, state that it does not appear in the uploaded reports.`;
+
+  const userPrompt = `=== UPLOADED KOT & F&B SHIFT DATA ===
+${JSON.stringify(shiftContext, null, 2)}
 
 === USER QUESTION ===
 ${question.trim()}`;
