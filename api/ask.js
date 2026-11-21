@@ -1,8 +1,15 @@
-// api/ask.js - Vercel Serverless Function powered by Groq
+// api/ask.js - Vercel Serverless Function powered by Groq with model fallback & rate limiting
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1-minute window
 const MAX_REQUESTS_PER_WINDOW = 20;    // Max 20 requests per IP per minute
 const rateLimitStore = new Map();
+
+// Standard chat models in Groq's catalog (ordered by fast/reliable availability)
+const GROQ_MODEL_CANDIDATES = [
+  'openai/gpt-oss-20b',
+  'openai/gpt-oss-120b',
+  'qwen/qwen3.8-27b'
+];
 
 function checkRateLimit(ip) {
   const now = Date.now();
@@ -32,6 +39,35 @@ function getClientIp(req) {
     return forwarded.split(',')[0].trim();
   }
   return req.socket?.remoteAddress || 'unknown-client';
+}
+
+async function callGroqModel(model, systemMessage, userPrompt, apiKey) {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemMessage },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.1,
+      max_tokens: 1024
+    })
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    const message = data?.error?.message || `Groq API error (${response.status})`;
+    const err = new Error(message);
+    err.status = response.status;
+    throw err;
+  }
+
+  return data?.choices?.[0]?.message?.content?.trim() || '';
 }
 
 export default async function handler(req, res) {
@@ -78,36 +114,19 @@ ${JSON.stringify(shiftContext || {}, null, 2)}
 === USER QUESTION ===
 ${question.trim()}`;
 
-  try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemMessage },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.1,
-        max_tokens: 1024
-      })
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: data?.error?.message || `Groq API error (${response.status})`
-      });
+  let lastError = null;
+  for (const model of GROQ_MODEL_CANDIDATES) {
+    try {
+      const answer = await callGroqModel(model, systemMessage, userPrompt, apiKey);
+      if (answer) {
+        return res.status(200).json({ answer, model });
+      }
+    } catch (err) {
+      lastError = err;
     }
-
-    const answer = data?.choices?.[0]?.message?.content || 'No response returned by Groq.';
-    return res.status(200).json({ answer });
-  } catch (err) {
-    return res.status(500).json({
-      error: 'Failed to communicate with Groq: ' + (err.message || String(err))
-    });
   }
+
+  return res.status(lastError?.status || 502).json({
+    error: lastError?.message || 'Unable to get a response from available Groq models.'
+  });
 }
