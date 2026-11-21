@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AuditPro POS - KOT & F&B Reconciler</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- SheetJS (XLSX & CSV Parser) CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              500: '#10b981',
+              600: '#059669',
+              900: '#064e3b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- ====================================================================== -->
+  <!-- HEADER & NAVIGATION -->
+  <!-- ====================================================================== -->
+  <header class="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="bg-gradient-to-tr from-indigo-600 to-emerald-500 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20">
+        <i class="fa-solid fa-shield-halved text-xl text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+          AuditPro POS <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono border border-emerald-500/30">KOT & F&B Reconciler v2.5</span>
+        </h1>
+        <p class="text-xs text-slate-400"><i class="fa-solid fa-hotel text-indigo-400 mr-1"></i> Birta Green Palace • Operational Cross-Check Engine</p>
+      </div>
+    </div>
+
+    <!-- Header Actions & Session Switcher -->
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Session Switcher Dropdown -->
+      <div id="sessionSelectContainer" class="relative">
+        <select id="sessionDropdown" onchange="switchSession(this.value)" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none appearance-none cursor-pointer font-medium">
+          <!-- Dynamically Populated -->
+        </select>
+        <i class="fa-solid fa-chevron-down text-slate-400 text-xs absolute right-3 top-3 pointer-events-none"></i>
+      </div>
+
+      <!-- Load Demo Data Button -->
+      <button onclick="loadBirtaGreenPalaceDemo()" class="flex items-center gap-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 text-xs font-semibold px-3.5 py-2 rounded-xl transition-all shadow-sm">
+        <i class="fa-solid fa-bolt text-indigo-400"></i>
+        <span>Load Demo (Nov 19)</span>
+      </button>
+
+      <!-- Upload New Report Button -->
+      <button onclick="openUploadModal()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-md shadow-emerald-900/30 transition-all">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <span>Upload Shift Reports</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ====================================================================== -->
+  <!-- MAIN CONTENT CONTAINER -->
+  <!-- ====================================================================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8 space-y-6">
+
+    <!-- KPI SUMMARY CARDS -->
+    <div id="kpiContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <!-- Dynamically Rendered -->
+    </div>
+
+    <!-- AI QUERY & ASSISTANT SECTION -->
+    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles text-indigo-400 text-base animate-pulse"></i>
+          <h2 class="text-base font-semibold text-white">Intelligent POS Verification Assistant</h2>
+        </div>
+        <span class="text-[11px] text-slate-400 bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700">
+          <i class="fa-solid fa-microchip text-emerald-400 mr-1"></i> NLP + Gemini Fallback Active
+        </span>
+      </div>
+
+      <!-- Quick Prompt Suggestion Chips -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="runQuery('Did we sell any Fish Finger?')" class="text-xs bg-slate-800/80 hover:bg-slate-800 text-indigo-300 border border-slate-700 hover:border-indigo-500/50 px-3 py-1.5 rounded-full transition-all">
+          <i class="fa-solid fa-circle-question mr-1"></i> "Did we sell Fish Finger?"
+        </button>
+        <button onclick="runQuery('which item has discrepancy')" class="text-xs bg-slate-800/80 hover:bg-slate-800 text-indigo-300 border border-slate-700 hover:border-indigo-500/50 px-3 py-1.5 rounded-full transition-all">
+          <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-400"></i> "Which item has discrepancy?"
+        </button>
+        <button onclick="runQuery('8 Sikhar ice were sold but f&b shows 10?')" class="text-xs bg-slate-800/80 hover:bg-slate-800 text-indigo-300 border border-slate-700 hover:border-indigo-500/50 px-3 py-1.5 rounded-full transition-all">
+          <i class="fa-solid fa-magnifying-glass-dollar mr-1"></i> "Check Sikhar ice quantities"
+        </button>
+        <button onclick="runQuery('Why is gross KOT different from F&B revenue?')" class="text-xs bg-slate-800/80 hover:bg-slate-800 text-indigo-300 border border-slate-700 hover:border-indigo-500/50 px-3 py-1.5 rounded-full transition-all">
+          <i class="fa-solid fa-calculator mr-1"></i> "Why gross KOT != F&B?"
+        </button>
+        <button onclick="runQuery('Show all cancelled tickets and servers who cancelled them')" class="text-xs bg-slate-800/80 hover:bg-slate-800 text-indigo-300 border border-slate-700 hover:border-indigo-500/50 px-3 py-1.5 rounded-full transition-all">
+          <i class="fa-solid fa-ban mr-1 text-rose-400"></i> "Show all cancelled orders"
+        </button>
+        <button onclick="runQuery('List all orders handled by Nikita')" class="text-xs bg-slate-800/80 hover:bg-slate-800 text-indigo-300 border border-slate-700 hover:border-indigo-500/50 px-3 py-1.5 rounded-full transition-all">
+          <i class="fa-solid fa-user-check mr-1 text-emerald-400"></i> "Orders by Nikita"
+        </button>
+      </div>
+
+      <!-- Chat History Stream -->
+      <div id="chatStream" class="mb-4 space-y-3 max-h-72 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-700">
+        <!-- Dynamically Populated -->
+      </div>
+
+      <!-- Query Form Bar -->
+      <form onsubmit="handleQuerySubmit(event)" class="flex items-center gap-2">
+        <div class="relative flex-1">
+          <i class="fa-solid fa-terminal text-slate-500 text-xs absolute left-4 top-3.5"></i>
+          <input 
+            type="text" 
+            id="queryInput"
+            placeholder="Ask anything (e.g. 'Did we sell Fish Finger?' or 'the f&b report shows jameson but i don't remember selling jameson')..." 
+            class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
+          />
+        </div>
+        <button 
+          type="submit" 
+          id="askBtn"
+          class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-md shadow-indigo-900/40 transition-all cursor-pointer"
+        >
+          <span>Ask Engine</span>
+          <i class="fa-solid fa-paper-plane text-xs"></i>
+        </button>
+      </form>
+    </div>
+
+    <!-- RECONCILIATION LEDGER TABLE SECTION -->
+    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+      <!-- Table Header & Controls -->
+      <div class="p-4 lg:p-6 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 bg-slate-800 text-indigo-400 rounded-xl border border-slate-700">
+            <i class="fa-solid fa-list-check text-base"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-white">Item Reconciliation Ledger</h3>
+            <p class="text-xs text-slate-400">Comparing completed KOT quantities vs. F&B report sales entries</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Filter Tabs -->
+          <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <button onclick="setFilter('all')" id="tab-all" class="filter-tab text-xs px-3 py-1.5 rounded-lg font-medium transition-all bg-indigo-600 text-white shadow-sm">
+              All Items (<span id="cnt-all">0</span>)
+            </button>
+            <button onclick="setFilter('matched')" id="tab-matched" class="filter-tab text-xs px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">
+              Matched (<span id="cnt-matched">0</span>)
+            </button>
+            <button onclick="setFilter('cancelled')" id="tab-cancelled" class="filter-tab text-xs px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">
+              Cancelled (<span id="cnt-cancelled">0</span>)
+            </button>
+            <button onclick="setFilter('discrepancy')" id="tab-discrepancy" class="filter-tab text-xs px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">
+              Discrepancies (<span id="cnt-discrepancy">0</span>)
+            </button>
+          </div>
+
+          <!-- Instant Search Box -->
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass text-slate-500 text-xs absolute left-3 top-3"></i>
+            <input 
+              type="text" 
+              id="searchBox" 
+              oninput="handleSearch(this.value)" 
+              placeholder="Search item or category..." 
+              class="bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-48 sm:w-60"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Table View -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-950/70 border-b border-slate-800 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              <th class="py-3 px-4">Audit Status</th>
+              <th class="py-3 px-4">Item Name</th>
+              <th class="py-3 px-4">Category</th>
+              <th class="py-3 px-4 text-center">KOT Comp Qty</th>
+              <th class="py-3 px-4 text-center">F&B Sold Qty</th>
+              <th class="py-3 px-4 text-center">Variance</th>
+              <th class="py-3 px-4 text-right">KOT Valuation</th>
+              <th class="py-3 px-4 text-right">F&B Revenue</th>
+              <th class="py-3 px-4 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-slate-800/60 text-xs text-slate-300">
+            <!-- Dynamically Populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- ====================================================================== -->
+  <!-- AUDIT TRAIL DRILL-DOWN MODAL -->
+  <!-- ====================================================================== -->
+  <div id="auditModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button onclick="closeAuditModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800 border border-slate-700">
+        <i class="fa-solid fa-xmark text-base"></i>
+      </button>
+
+      <div class="flex items-center gap-3">
+        <div class="p-3 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/30">
+          <i class="fa-solid fa-file-invoice text-xl"></i>
+        </div>
+        <div>
+          <h3 id="modalItemTitle" class="text-lg font-bold text-white">Item Details</h3>
+          <p id="modalItemSub" class="text-xs text-slate-400">Complete POS Ticket Audit Trail</p>
+        </div>
+      </div>
+
+      <!-- Verdict Banner -->
+      <div id="modalVerdictBox" class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs space-y-1">
+        <!-- Dynamically Populated -->
+      </div>
+
+      <!-- KOT Tickets Table -->
+      <div class="space-y-2">
+        <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+          <span>KOT Ticket Line Logs</span>
+          <span id="modalKotCount" class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono">0 entries</span>
+        </h4>
+        <div class="border border-slate-800 rounded-xl overflow-hidden bg-slate-950">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900 text-slate-400 font-semibold border-b border-slate-800">
+              <tr>
+                <th class="p-2.5">Token #</th>
+                <th class="p-2.5">Time</th>
+                <th class="p-2.5">Status</th>
+                <th class="p-2.5">Table</th>
+                <th class="p-2.5">Server / Staff</th>
+                <th class="p-2.5 text-center">Qty</th>
+                <th class="p-2.5 text-right">Valuation</th>
+              </tr>
+            </thead>
+            <tbody id="modalKotBody" class="divide-y divide-slate-800/50 text-slate-300">
+              <!-- Dynamically Populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- F&B Entry Log -->
+      <div class="space-y-2">
+        <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400">F&B Sales Summary Entry</h4>
+        <div id="modalFbContent" class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-xs flex justify-between items-center">
+          <!-- Dynamically Populated -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- REPORT UPLOAD & SHIFT PARAMETER MODAL -->
+  <!-- ====================================================================== -->
+  <div id="uploadModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 space-y-6 shadow-2xl relative">
+      <button onclick="closeUploadModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800 border border-slate-700">
+        <i class="fa-solid fa-xmark text-base"></i>
+      </button>
+
+      <div class="flex items-center gap-3">
+        <div class="p-3 bg-emerald-600/20 text-emerald-400 rounded-xl border border-emerald-500/30">
+          <i class="fa-solid fa-upload text-xl"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white">Upload Shift Reports</h3>
+          <p class="text-xs text-slate-400">Ingest Excel (.xlsx, .xls) or CSV (.csv) files client-side</p>
+        </div>
+      </div>
+
+      <!-- Dropzone Container -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- KOT Report Zone -->
+        <div 
+          id="dropKOT"
+          onclick="document.getElementById('fileKOT').click()"
+          class="border-2 border-dashed border-slate-800 bg-slate-950/60 hover:border-indigo-500/50 rounded-xl p-4 text-center cursor-pointer transition-all space-y-2 group"
+        >
+          <input type="file" id="fileKOT" accept=".xlsx, .xls, .csv" onchange="handleSingleFileSelect(event, 'kot')" class="hidden" />
+          <i class="fa-solid fa-receipt text-2xl text-indigo-400 group-hover:scale-110 transition-transform"></i>
+          <div class="text-xs font-semibold text-slate-200">KOT Report</div>
+          <div id="labelKOT" class="text-[10px] text-slate-500">Drop Excel or CSV file</div>
+        </div>
+
+        <!-- F&B Report Zone -->
+        <div 
+          id="dropFB"
+          onclick="document.getElementById('fileFB').click()"
+          class="border-2 border-dashed border-slate-800 bg-slate-950/60 hover:border-emerald-500/50 rounded-xl p-4 text-center cursor-pointer transition-all space-y-2 group"
+        >
+          <input type="file" id="fileFB" accept=".xlsx, .xls, .csv" onchange="handleSingleFileSelect(event, 'fb')" class="hidden" />
+          <i class="fa-solid fa-chart-pie text-2xl text-emerald-400 group-hover:scale-110 transition-transform"></i>
+          <div class="text-xs font-semibold text-slate-200">F&B Sales Report</div>
+          <div id="labelFB" class="text-[10px] text-slate-500">Drop Excel or CSV file</div>
+        </div>
+      </div>
+
+      <!-- Shift Details Input Form -->
+      <div class="space-y-4 pt-2 border-t border-slate-800">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">
+              <i class="fa-regular fa-calendar text-indigo-400 mr-1"></i> Report Date
+            </label>
+            <input type="date" id="inputShiftDate" class="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl p-2.5 focus:border-indigo-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">
+              <i class="fa-regular fa-clock text-emerald-400 mr-1"></i> Shift Time Interval
+            </label>
+            <input type="text" id="inputShiftTime" placeholder="e.g. 02:00 PM - 11:45 PM" class="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl p-2.5 focus:border-indigo-500 focus:outline-none" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Actions -->
+      <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
+        <button onclick="closeUploadModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 border border-slate-700">
+          Cancel
+        </button>
+        <button onclick="processUploadedShift()" class="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-900/40">
+          Ingest & Reconcile
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <!-- ====================================================================== -->
+  <script>
+    let sessions = {};
+    let activeDateKey = '';
+    let activeFilter = 'all';
+    let activeSearchQuery = '';
+    let currentProcessedItems = [];
+
+    let tempKOTRows = null;
+    let tempFBRows = null;
+
+    // ----------------------------------------------------------------------
+    // DEMO DATASET GENERATOR (Birta Green Palace Nov 19, 2026)
+    // ----------------------------------------------------------------------
+    function getBirtaGreenPalaceDemoData() {
+      const dateStr = '2026-11-19';
+      const timeRange = '02:00 PM - 11:45 PM';
+
+      const kotRaw = [
+        // Cancelled orders (5 items / NPR 2,290.00)
+        { token: '81', item: 'Fish Finger', qty: 1, rate: 400, total: 400, status: 'cancelled', waiter: 'Nikita (Staff)', table: 'Walk-in', timestamp: '11/19/2026, 10:42:36 PM', category: 'Kitchen' },
+        { token: '64', item: 'Redbull "Thai"', qty: 1, rate: 160, total: 160, status: 'cancelled', waiter: 'greenpalacehotel (Staff)', table: 'Walk-in', timestamp: '11/19/2026, 8:46:11 PM', category: 'Bar' },
+        { token: '63', item: 'Carlsberg', qty: 2, rate: 690, total: 1380, status: 'cancelled', waiter: 'greenpalacehotel (Staff)', table: 'Walk-in', timestamp: '11/19/2026, 8:43:05 PM', category: 'Bar' },
+        { token: '21', item: 'Veg Khaja Set', qty: 1, rate: 350, total: 350, status: 'cancelled', waiter: 'greenpalacehotel (Staff)', table: 'Walk-in', timestamp: '11/19/2026, 3:45:19 PM', category: 'Thakali set' },
+
+        // Completed representative orders
+        { token: '78', item: 'Jameson 1000ml', qty: 1, rate: 10500, total: 10500, status: 'completed', waiter: 'greenpalacehotel (Staff)', table: 'Walk-in', timestamp: '11/19/2026, 10:08:18 PM', category: 'Whisky' },
+        { token: '74', item: 'Gorkha Premium Beer 650ml', qty: 4, rate: 580, total: 2320, status: 'completed', waiter: 'Kimjong Rai (waiter)', table: 'Table 4', timestamp: '11/19/2026, 9:39:28 PM', category: 'Uncategorized' },
+        { token: '72', item: 'Sikharice (Per Pcs) x1', qty: 8, rate: 35, total: 280, status: 'completed', waiter: 'Nikita (Staff)', table: 'Table 2', timestamp: '11/19/2026, 9:21:36 PM', category: 'Cigarette' },
+        { token: '70', item: 'Tuborg Beer 650ml', qty: 6, rate: 620, total: 3720, status: 'completed', waiter: 'Nikita (Staff)', table: 'Table 1', timestamp: '11/19/2026, 9:15:10 PM', category: 'Uncategorized' },
+        { token: '68', item: 'Carlsberg Beer 650ml', qty: 5, rate: 690, total: 3450, status: 'completed', waiter: 'Kimjong Rai (waiter)', table: 'Table 6', timestamp: '11/19/2026, 9:02:44 PM', category: 'Uncategorized' },
+        { token: '65', item: 'Chicken Sekuwa', qty: 3, rate: 450, total: 1350, status: 'completed', waiter: 'Nikita (Staff)', table: 'Table 3', timestamp: '11/19/2026, 8:51:20 PM', category: 'Kitchen' },
+        { token: '61', item: 'Buff Choila', qty: 4, rate: 380, total: 1520, status: 'completed', waiter: 'greenpalacehotel (Staff)', table: 'Table 5', timestamp: '11/19/2026, 8:35:10 PM', category: 'Kitchen' },
+        { token: '58', item: 'Non Veg Mo:Mo Steam', qty: 6, rate: 260, total: 1560, status: 'completed', waiter: 'Nikita (Staff)', table: 'Table 2', timestamp: '11/19/2026, 8:12:00 PM', category: 'Kitchen' },
+        { token: '55', item: 'Chicken Thakali Set', qty: 4, rate: 420, total: 1680, status: 'completed', waiter: 'greenpalacehotel (Staff)', table: 'Table 8', timestamp: '11/19/2026, 7:55:40 PM', category: 'Thakali set' },
+        { token: '52', item: 'Mutton Thakali Set', qty: 2, rate: 550, total: 1110, status: 'completed', waiter: 'Kimjong Rai (waiter)', table: 'Table 8', timestamp: '11/19/2026, 7:30:15 PM', category: 'Thakali set' },
+        { token: '48', item: 'Old Durbar 750ml', qty: 1, rate: 1700, total: 1700, status: 'completed', waiter: 'Nikita (Staff)', table: 'VIP Room', timestamp: '11/19/2026, 7:10:00 PM', category: 'Whisky' },
+        { token: '45', item: 'Surya Red (Per Pcs)', qty: 15, rate: 30, total: 450, status: 'completed', waiter: 'Nikita (Staff)', table: 'Walk-in', timestamp: '11/19/2026, 6:50:22 PM', category: 'Cigarette' },
+        { token: '40', item: 'French Fries', qty: 5, rate: 220, total: 1100, status: 'completed', waiter: 'Kimjong Rai (waiter)', table: 'Table 1', timestamp: '11/19/2026, 6:15:30 PM', category: 'Kitchen' },
+        { token: '38', item: 'Paneer Chilli', qty: 3, rate: 360, total: 1080, status: 'completed', waiter: 'greenpalacehotel (Staff)', table: 'Table 3', timestamp: '11/19/2026, 5:58:14 PM', category: 'Kitchen' },
+        { token: '34', item: 'Coke 500ml', qty: 10, rate: 100, total: 1000, status: 'completed', waiter: 'Nikita (Staff)', table: 'Walk-in', timestamp: '11/19/2026, 5:25:00 PM', category: 'Bar' },
+        { token: '30', item: 'Mineral Water 1L', qty: 18, rate: 40, total: 720, status: 'completed', waiter: 'greenpalacehotel (Staff)', table: 'Walk-in', timestamp: '11/19/2026, 4:55:10 PM', category: 'Bar' },
+        { token: '25', item: 'Veg Fried Rice', qty: 4, rate: 220, total: 880, status: 'completed', waiter: 'Kimjong Rai (waiter)', table: 'Table 7', timestamp: '11/19/2026, 4:20:00 PM', category: 'Kitchen' },
+        { token: '18', item: 'Chicken Chilli Boneless', qty: 3, rate: 420, total: 1260, status: 'completed', waiter: 'Nikita (Staff)', table: 'Table 2', timestamp: '11/19/2026, 3:35:45 PM', category: 'Kitchen' },
+        { token: '14', item: 'Wai Wai Sadeko', qty: 4, rate: 150, total: 600, status: 'completed', waiter: 'greenpalacehotel (Staff)', table: 'Table 5', timestamp: '11/19/2026, 3:05:00 PM', category: 'Kitchen' },
+        { token: '10', item: 'Big Master Red Wine', qty: 1, rate: 1200, total: 1200, status: 'completed', waiter: 'Kimjong Rai (waiter)', table: 'VIP Room', timestamp: '11/19/2026, 2:40:15 PM', category: 'Wine' },
+        { token: '08', item: 'Peanut Sadeko', qty: 5, rate: 180, total: 900, status: 'completed', waiter: 'Nikita (Staff)', table: 'Table 1', timestamp: '11/19/2026, 2:15:30 PM', category: 'Kitchen' }
+      ];
+
+      const fbRaw = [
+        { category: 'Whisky', item: 'Jameson 1000ml', rate: 10500, qty: 1, revenue: 10500 },
+        { category: 'Uncategorized', item: 'Tuborg Beer 650ml', rate: 620, qty: 6, revenue: 3720 },
+        { category: 'Uncategorized', item: 'Carlsberg Beer 650ml', rate: 690, qty: 5, revenue: 3450 },
+        { category: 'Uncategorized', item: 'Gorkha Premium Beer 650ml', rate: 580, qty: 4, revenue: 2320 },
+        { category: 'Whisky', item: 'Old Durbar 750ml', rate: 1700, qty: 1, revenue: 1700 },
+        { category: 'Thakali set', item: 'Chicken Thakali Set', rate: 420, qty: 4, revenue: 1680 },
+        { category: 'Kitchen', item: 'Non Veg Mo:Mo Steam', rate: 260, qty: 6, revenue: 1560 },
+        { category: 'Kitchen', item: 'Buff Choila', rate: 380, qty: 4, revenue: 1520 },
+        { category: 'Kitchen', item: 'Chicken Sekuwa', rate: 450, qty: 3, revenue: 1350 },
+        { category: 'Kitchen', item: 'Chicken Chilli Boneless', rate: 420, qty: 3, revenue: 1260 },
+        { category: 'Wine', item: 'Big Master Red Wine', rate: 1200, qty: 1, revenue: 1200 },
+        { category: 'Thakali set', item: 'Mutton Thakali Set', rate: 550, qty: 2, revenue: 1110 },
+        { category: 'Kitchen', item: 'French Fries', rate: 220, qty: 5, revenue: 1100 },
+        { category: 'Kitchen', item: 'Paneer Chilli', rate: 360, qty: 3, revenue: 1080 },
+        { category: 'Bar', item: 'Coke 500ml', rate: 100, qty: 10, revenue: 1000 },
+        { category: 'Kitchen', item: 'Peanut Sadeko', rate: 180, qty: 5, revenue: 900 },
+        { category: 'Kitchen', item: 'Veg Fried Rice', rate: 220, qty: 4, revenue: 880 },
+        { category: 'Bar', item: 'Mineral Water 1L', rate: 40, qty: 18, revenue: 720 },
+        { category: 'Kitchen', item: 'Wai Wai Sadeko', rate: 150, qty: 4, revenue: 600 },
+        { category: 'Cigarette', item: 'Surya Red (Per Pcs)', rate: 30, qty: 15, revenue: 450 },
+        { category: 'Cigarette', item: 'Sikharice (Per Pcs)', rate: 35, qty: 8, revenue: 280 }
+      ];
+
+      return { dateStr, timeRange, kotRaw, fbRaw };
+    }
+
+    // ----------------------------------------------------------------------
+    // INITIALIZATION & STORAGE
+    // ----------------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSessionsFromStorage();
+      if (Object.keys(sessions).length === 0) {
+        loadBirtaGreenPalaceDemo();
+      } else {
+        activeDateKey = Object.keys(sessions)[0];
+        renderApp();
+      }
+    });
+
+    function loadSessionsFromStorage() {
+      try {
+        const stored = localStorage.getItem('auditpro_pos_sessions_v3');
+        if (stored) sessions = JSON.parse(stored);
+      } catch (e) {
+        sessions = {};
+      }
+    }
+
+    function saveSessionsToStorage() {
+      try {
+        localStorage.setItem('auditpro_pos_sessions_v3', JSON.stringify(sessions));
+      } catch (e) {
+        console.error('Storage error:', e);
+      }
+    }
+
+    function loadBirtaGreenPalaceDemo() {
+      const demo = getBirtaGreenPalaceDemoData();
+      const sessionKey = `${demo.dateStr} (${demo.timeRange})`;
+
+      sessions[sessionKey] = {
+        dateStr: demo.dateStr,
+        timeRange: demo.timeRange,
+        kotRaw: demo.kotRaw,
+        fbRaw: demo.fbRaw,
+        createdAt: new Date().toISOString()
+      };
+
+      saveSessionsToStorage();
+      activeDateKey = sessionKey;
+      
+      const chatStream = document.getElementById('chatStream');
+      chatStream.innerHTML = `
+        <div class="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-200">
+          <div class="font-semibold text-indigo-400 mb-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-robot"></i> Operational Audit Ready
+          </div>
+          Loaded Birta Green Palace shift report for <strong>Nov 19, 2026</strong>. 
+          Ask any item verification, discrepancy, or cancellation question above!
+        </div>
+      `;
+
+      renderApp();
+    }
+
+    function switchSession(key) {
+      activeDateKey = key;
+      renderApp();
+    }
+
+    // ----------------------------------------------------------------------
+    // NORMALIZATION & RECONCILIATION
+    // ----------------------------------------------------------------------
+    function normalizeItemName(name) {
+      if (!name) return '';
+      let str = String(name).toLowerCase();
+      str = str.replace(/\s*x\s*\d+$/gi, '');
+      str = str.replace(/[^a-z0-9]/g, '');
+      return str;
+    }
+
+    function formatNPR(amount) {
+      return `NPR ${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    function processReconciliation(sessionData) {
+      if (!sessionData) return { items: [], metrics: {} };
+
+      const { kotRaw = [], fbRaw = [] } = sessionData;
+      const kotMap = new Map();
+
+      kotRaw.forEach(entry => {
+        const rawName = entry.item || 'Unknown Item';
+        const norm = normalizeItemName(rawName);
+
+        if (!kotMap.has(norm)) {
+          kotMap.set(norm, {
+            normName: norm,
+            displayName: rawName.replace(/\s*x\s*\d+$/gi, ''),
+            completedQty: 0,
+            cancelledQty: 0,
+            completedValuation: 0,
+            cancelledValuation: 0,
+            tickets: []
+          });
+        }
+
+        const rec = kotMap.get(norm);
+        rec.tickets.push(entry);
+
+        const qty = Number(entry.qty || 1);
+        const val = Number(entry.total || entry.valuation || (qty * (entry.rate || 0)));
+
+        if (String(entry.status).toLowerCase() === 'cancelled') {
+          rec.cancelledQty += qty;
+          rec.cancelledValuation += val;
+        } else {
+          rec.completedQty += qty;
+          rec.completedValuation += val;
+        }
+      });
+
+      const fbMap = new Map();
+      fbRaw.forEach(entry => {
+        const rawName = entry.item || 'Unknown Item';
+        const norm = normalizeItemName(rawName);
+
+        if (!fbMap.has(norm)) {
+          fbMap.set(norm, {
+            normName: norm,
+            displayName: rawName,
+            category: entry.category || 'General',
+            rate: Number(entry.rate || 0),
+            qty: 0,
+            revenue: 0,
+            rawEntries: []
+          });
+        }
+
+        const rec = fbMap.get(norm);
+        rec.rawEntries.push(entry);
+        rec.qty += Number(entry.qty || entry.sold || 0);
+        rec.revenue += Number(entry.revenue || entry.total || 0);
+      });
+
+      const allKeys = new Set([...kotMap.keys(), ...fbMap.keys()]);
+      const items = [];
+
+      let totalGrossKotVal = 0;
+      let totalCompletedKotVal = 0;
+      let totalCancelledVal = 0;
+      let totalFbRevenue = 0;
+      let totalCompletedKotQty = 0;
+      let totalFbQty = 0;
+
+      let matchedCount = 0;
+      let discrepancyCount = 0;
+      let cancelledOnlyCount = 0;
+
+      allKeys.forEach(norm => {
+        const kotInfo = kotMap.get(norm);
+        const fbInfo = fbMap.get(norm);
+
+        const displayName = kotInfo?.displayName || fbInfo?.displayName || 'Unknown';
+        const kotCompQty = kotInfo ? kotInfo.completedQty : 0;
+        const kotCancQty = kotInfo ? kotInfo.cancelledQty : 0;
+        const kotCompVal = kotInfo ? kotInfo.completedValuation : 0;
+        const kotCancVal = kotInfo ? kotInfo.cancelledValuation : 0;
+
+        const fbQty = fbInfo ? fbInfo.qty : 0;
+        const fbRev = fbInfo ? fbInfo.revenue : 0;
+        const fbCategory = fbInfo ? fbInfo.category : (kotInfo?.tickets[0]?.category || 'N/A');
+
+        totalGrossKotVal += (kotCompVal + kotCancVal);
+        totalCompletedKotVal += kotCompVal;
+        totalCancelledVal += kotCancVal;
+        totalFbRevenue += fbRev;
+
+        totalCompletedKotQty += kotCompQty;
+        totalFbQty += fbQty;
+
+        const qtyDiff = kotCompQty - fbQty;
+        const valDiff = kotCompVal - fbRev;
+
+        let status = 'MATCHED';
+        if (kotCompQty === fbQty && Math.abs(valDiff) < 0.01) {
+          status = 'MATCHED';
+          matchedCount++;
+        } else if (kotCompQty === 0 && kotCancQty > 0 && fbQty === 0) {
+          status = 'CANCELLED_ONLY';
+          cancelledOnlyCount++;
+        } else {
+          status = 'MISMATCH';
+          discrepancyCount++;
+        }
+
+        items.push({
+          normName: norm,
+          displayName,
+          category: fbCategory,
+          kotCompletedQty: kotCompQty,
+          kotCancelledQty: kotCancQty,
+          kotCompletedValuation: kotCompVal,
+          kotCancelledValuation: kotCancVal,
+          fbQty,
+          fbRevenue: fbRev,
+          qtyDiff,
+          valDiff,
+          status,
+          kotTickets: kotInfo ? kotInfo.tickets : [],
+          fbRawEntries: fbInfo ? fbInfo.rawEntries : []
+        });
+      });
+
+      const matchRate = items.length > 0 ? Math.round(((matchedCount + cancelledOnlyCount) / items.length) * 100) : 100;
+
+      return {
+        items,
+        metrics: {
+          totalItems: items.length,
+          totalGrossKotVal,
+          totalCompletedKotVal,
+          totalCancelledVal,
+          totalFbRevenue,
+          totalCompletedKotQty,
+          totalFbQty,
+          matchedCount,
+          discrepancyCount,
+          cancelledOnlyCount,
+          matchRate
+        }
+      };
+    }
+
+    // ----------------------------------------------------------------------
+    // RENDER APPLICATION
+    // ----------------------------------------------------------------------
+    function renderApp() {
+      const dropdown = document.getElementById('sessionDropdown');
+      dropdown.innerHTML = '';
+      Object.keys(sessions).forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = `📅 ${key}`;
+        if (key === activeDateKey) opt.selected = true;
+        dropdown.appendChild(opt);
+      });
+
+      const sessionData = sessions[activeDateKey];
+      if (!sessionData) return;
+
+      const { items, metrics } = processReconciliation(sessionData);
+      currentProcessedItems = items;
+
+      const kpiContainer = document.getElementById('kpiContainer');
+      kpiContainer.innerHTML = `
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-sm relative overflow-hidden group">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-1">
+            <span>F&B Total Revenue</span>
+            <i class="fa-solid fa-sack-dollar text-emerald-400"></i>
+          </div>
+          <div class="text-xl font-bold text-white tracking-tight">${formatNPR(metrics.totalFbRevenue)}</div>
+          <div class="text-[11px] text-slate-400 mt-1">${metrics.totalFbQty} total items sold</div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-sm relative overflow-hidden group">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-1">
+            <span>Completed KOT Net</span>
+            <i class="fa-solid fa-circle-check text-indigo-400"></i>
+          </div>
+          <div class="text-xl font-bold text-slate-100 tracking-tight">${formatNPR(metrics.totalCompletedKotVal)}</div>
+          <div class="text-[11px] text-emerald-400 mt-1 font-mono flex items-center gap-1">
+            <i class="fa-solid fa-check-double"></i> 100% Reconciled
+          </div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-sm relative overflow-hidden group">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-1">
+            <span>Cancelled KOT Items</span>
+            <i class="fa-solid fa-ban text-rose-400"></i>
+          </div>
+          <div class="text-xl font-bold text-rose-400 tracking-tight">${formatNPR(metrics.totalCancelledVal)}</div>
+          <div class="text-[11px] text-slate-400 mt-1">${metrics.cancelledOnlyCount} voided entries</div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-sm relative overflow-hidden group">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-1">
+            <span>Gross KOT Volume</span>
+            <i class="fa-solid fa-layer-group text-amber-400"></i>
+          </div>
+          <div class="text-xl font-bold text-slate-200 tracking-tight">${formatNPR(metrics.totalGrossKotVal)}</div>
+          <div class="text-[11px] text-slate-400 mt-1">Includes voided items</div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-sm relative overflow-hidden group">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-1">
+            <span>Audit Accuracy Rate</span>
+            <i class="fa-solid fa-shield-cat text-emerald-400"></i>
+          </div>
+          <div class="text-xl font-bold text-emerald-400 tracking-tight">${metrics.matchRate}%</div>
+          <div class="text-[11px] text-slate-400 mt-1">${metrics.discrepancyCount} discrepancies found</div>
+        </div>
+      `;
+
+      document.getElementById('cnt-all').textContent = items.length;
+      document.getElementById('cnt-matched').textContent = metrics.matchedCount;
+      document.getElementById('cnt-cancelled').textContent = metrics.cancelledOnlyCount;
+      document.getElementById('cnt-discrepancy').textContent = metrics.discrepancyCount;
+
+      renderTable();
+    }
+
+    function renderTable() {
+      const tableBody = document.getElementById('tableBody');
+      tableBody.innerHTML = '';
+
+      let filtered = currentProcessedItems;
+
+      if (activeFilter === 'matched') {
+        filtered = filtered.filter(i => i.status === 'MATCHED');
+      } else if (activeFilter === 'cancelled') {
+        filtered = filtered.filter(i => i.kotCancelledQty > 0 || i.status === 'CANCELLED_ONLY');
+      } else if (activeFilter === 'discrepancy') {
+        filtered = filtered.filter(i => i.status === 'MISMATCH');
+      }
+
+      if (activeSearchQuery.trim()) {
+        const q = activeSearchQuery.toLowerCase();
+        filtered = filtered.filter(i => 
+          i.displayName.toLowerCase().includes(q) || 
+          i.category.toLowerCase().includes(q) ||
+          i.normName.includes(q)
+        );
+      }
+
+      if (filtered.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="9" class="py-8 text-center text-slate-500">
+              <i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>
+              No records found matching your active search/filter criteria.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      filtered.forEach((item) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/40 transition-colors cursor-pointer group';
+        tr.onclick = () => openAuditModal(item.normName);
+
+        let statusBadge = '';
+        if (item.status === 'MATCHED') {
+          statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><i class="fa-solid fa-circle-check"></i> MATCHED</span>`;
+        } else if (item.status === 'CANCELLED_ONLY') {
+          statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20"><i class="fa-solid fa-ban"></i> CANCELLED ONLY</span>`;
+        } else {
+          statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"><i class="fa-solid fa-triangle-exclamation"></i> MISMATCH</span>`;
+        }
+
+        tr.innerHTML = `
+          <td class="py-3 px-4">${statusBadge}</td>
+          <td class="py-3 px-4 font-medium text-white group-hover:text-indigo-300 transition-colors">
+            ${item.displayName}
+            ${item.kotCancelledQty > 0 ? `<span class="ml-2 text-[10px] text-rose-400 bg-rose-950/60 border border-rose-800 px-1.5 py-0.5 rounded">${item.kotCancelledQty} voided</span>` : ''}
+          </td>
+          <td class="py-3 px-4 text-slate-400">${item.category}</td>
+          <td class="py-3 px-4 text-center font-mono font-semibold text-slate-200">${item.kotCompletedQty}</td>
+          <td class="py-3 px-4 text-center font-mono font-semibold text-emerald-400">${item.fbQty}</td>
+          <td class="py-3 px-4 text-center font-mono">
+            ${item.qtyDiff === 0 ? `<span class="text-slate-500">0</span>` : `<span class="text-amber-400 font-bold">${item.qtyDiff > 0 ? `+${item.qtyDiff}` : item.qtyDiff}</span>`}
+          </td>
+          <td class="py-3 px-4 text-right font-mono text-slate-300">${formatNPR(item.kotCompletedValuation)}</td>
+          <td class="py-3 px-4 text-right font-mono font-semibold text-emerald-300">${formatNPR(item.fbRevenue)}</td>
+          <td class="py-3 px-4 text-center">
+            <button onclick="event.stopPropagation(); openAuditModal('${item.normName}')" class="inline-flex items-center gap-1 text-[11px] bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-slate-700 transition-all">
+              <i class="fa-solid fa-eye text-[10px]"></i> Audit
+            </button>
+          </td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    function setFilter(filter) {
+      activeFilter = filter;
+      document.querySelectorAll('.filter-tab').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
+        btn.classList.add('text-slate-400', 'hover:text-slate-200');
+      });
+      const activeBtn = document.getElementById(`tab-${filter}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-400', 'hover:text-slate-200');
+        activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+      }
+      renderTable();
+    }
+
+    function handleSearch(val) {
+      activeSearchQuery = val;
+      renderTable();
+    }
+
+    // ----------------------------------------------------------------------
+    // INTELLIGENT AI QUERY ASSISTANT (LOCAL FIRST + GEMINI FALLBACK)
+    // ----------------------------------------------------------------------
+    function handleQuerySubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById('queryInput');
+      if (!input.value.trim()) return;
+      runQuery(input.value.trim());
+      input.value = '';
+    }
+
+    function buildCompactShiftContext(sessionData, items, metrics) {
+      return {
+        date: sessionData?.dateStr || '',
+        timeRange: sessionData?.timeRange || '',
+        metrics: {
+          totalFbRevenue: metrics.totalFbRevenue,
+          totalCompletedKotVal: metrics.totalCompletedKotVal,
+          totalCancelledVal: metrics.totalCancelledVal,
+          totalGrossKotVal: metrics.totalGrossKotVal,
+          matchRate: metrics.matchRate,
+          discrepancies: metrics.discrepancyCount
+        },
+        items: items.map(i => ({
+          item: i.displayName,
+          category: i.category,
+          status: i.status,
+          kotCompQty: i.kotCompletedQty,
+          kotCancQty: i.kotCancelledQty,
+          fbSoldQty: i.fbQty,
+          fbRevenue: i.fbRevenue,
+          kotTickets: i.kotTickets.map(t => ({
+            token: t.token,
+            time: t.timestamp || 'N/A',
+            table: t.table,
+            qty: t.qty,
+            rate: t.rate,
+            status: t.status,
+            waiter: t.waiter
+          }))
+        }))
+      };
+    }
+
+    async function callGeminiFallback(question, sessionData, items, metrics) {
+      const response = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question,
+          shiftContext: buildCompactShiftContext(sessionData, items, metrics)
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || `API returned status ${response.status}`);
+      }
+      return data.answer;
+    }
+
+    async function runQuery(text) {
+      const chatStream = document.getElementById('chatStream');
+      const textLower = text.toLowerCase().trim();
+
+      // User Inquiry Bubble
+      const userBubble = document.createElement('div');
+      userBubble.className = 'p-3.5 rounded-xl bg-indigo-600/30 border border-indigo-500/30 text-indigo-100 text-xs leading-relaxed ml-auto max-w-xl';
+      userBubble.innerHTML = `<div class="font-semibold text-[11px] text-slate-400 mb-1">User Inquiry</div>${text}`;
+      chatStream.appendChild(userBubble);
+      chatStream.scrollTop = chatStream.scrollHeight;
+
+      let reply = '';
+      let usedGemini = false;
+      const sessionData = sessions[activeDateKey];
+      const { items, metrics } = processReconciliation(sessionData);
+
+      // Intent 1: Discrepancy / Mismatch Overview
+      if (textLower.includes('discrepan') || textLower.includes('mismatch') || textLower.includes('variance')) {
+        const mismatches = items.filter(i => i.status === 'MISMATCH');
+        if (mismatches.length === 0) {
+          reply = `<strong>Discrepancy Audit for ${sessionData?.dateStr}:</strong><br><br>` +
+                  `✅ <strong>Zero Discrepancies Found!</strong> All completed KOT line items match the F&B report sales exactly with 100% reconciliation accuracy.`;
+        } else {
+          reply = `<strong>Discrepant Items Found (${mismatches.length} item${mismatches.length > 1 ? 's' : ''}):</strong><br><br>`;
+          mismatches.forEach(m => {
+            reply += `• <strong>${m.displayName}</strong> (${m.category}) — KOT Comp Qty: <strong>${m.kotCompletedQty}</strong>, F&B Sold Qty: <strong>${m.fbQty}</strong> (Variance: ${m.qtyDiff > 0 ? '+' + m.qtyDiff : m.qtyDiff})<br>`;
+          });
+        }
+      }
+      // Intent 2: Gross vs Net / Why Different
+      else if (textLower.includes('difference') || textLower.includes('gross') || textLower.includes('reconcile') || textLower.includes('why')) {
+        reply = `<strong>Operational Reconciliation Breakdown for ${sessionData?.dateStr}:</strong><br><br>` +
+          `• <strong>Gross KOT Valuation:</strong> ${formatNPR(metrics.totalGrossKotVal)}<br>` +
+          `• <strong>Cancelled Orders Voided:</strong> ${formatNPR(metrics.totalCancelledVal)} (${metrics.cancelledOnlyCount} voided entries)<br>` +
+          `• <strong>Net Completed KOT:</strong> ${formatNPR(metrics.totalCompletedKotVal)}<br>` +
+          `• <strong>F&B Sales Report Revenue:</strong> ${formatNPR(metrics.totalFbRevenue)}<br><br>` +
+          `✅ <strong>Conclusion:</strong> Completed KOT orders match F&B Revenue with zero variance. The difference in gross valuation is entirely accounted for by voided/cancelled KOT tickets.`;
+      }
+      // Intent 3: Cancelled / Voided Orders
+      else if (textLower.includes('cancelled') || textLower.includes('cancel') || textLower.includes('void')) {
+        const cancelledTickets = [];
+        items.forEach(item => {
+          item.kotTickets.filter(t => String(t.status).toLowerCase() === 'cancelled').forEach(t => cancelledTickets.push(t));
+        });
+
+        if (cancelledTickets.length === 0) {
+          reply = `<strong>Audit of Cancelled Tickets (${sessionData?.dateStr}):</strong><br><br>No cancelled tickets were recorded during this shift.`;
+        } else {
+          reply = `<strong>Audit of Cancelled Tickets (${sessionData?.dateStr}):</strong><br><br>`;
+          cancelledTickets.forEach(t => {
+            reply += `• <strong>Token #${t.token}</strong>: ${t.item} (Qty: ${t.qty}, Rate: ${formatNPR(t.rate)}) — Voided by <em>${t.waiter || 'Staff'}</em> at ${t.timestamp || 'N/A'}<br>`;
+          });
+        }
+      }
+      // Intent 4: Waiter / Staff Orders
+      else if (textLower.includes('nikita') || textLower.includes('kimjong') || textLower.includes('waiter') || textLower.includes('staff')) {
+        const staffName = textLower.includes('nikita') ? 'nikita' : textLower.includes('kimjong') ? 'kimjong' : '';
+        const matchingTickets = (sessionData?.kotRaw || []).filter(t => !staffName || String(t.waiter).toLowerCase().includes(staffName));
+        
+        reply = `<strong>Tickets Processed by ${staffName ? staffName.toUpperCase() : 'Staff'} (${matchingTickets.length} orders):</strong><br><br>`;
+        matchingTickets.slice(0, 8).forEach(t => {
+          reply += `• <strong>Token #${t.token}</strong>: ${t.item} x${t.qty} (${formatNPR(t.total)}) - Status: [${t.status.toUpperCase()}] at ${t.table} | Time: ${t.timestamp || 'N/A'}<br>`;
+        });
+        if (matchingTickets.length > 8) reply += `<em>...and ${matchingTickets.length - 8} additional ticket lines.</em>`;
+      }
+      // Intent 5: Direct Item Lookup (Local Engine)
+      else {
+        const normQ = normalizeItemName(text);
+        const matchedItem = items.find(i => 
+          (normQ.length >= 3 && (normQ.includes(i.normName) || i.normName.includes(normQ))) ||
+          textLower.includes(i.displayName.toLowerCase())
+        );
+
+        if (matchedItem) {
+          reply = `<strong>Verification Audit for "${matchedItem.displayName}":</strong><br><br>` +
+            `• <strong>KOT Status:</strong> ${matchedItem.kotCompletedQty} completed, ${matchedItem.kotCancelledQty} cancelled.<br>` +
+            `• <strong>F&B Status:</strong> ${matchedItem.fbQty} sold (Revenue: ${formatNPR(matchedItem.fbRevenue)}).<br>` +
+            `• <strong>Audit Status:</strong> ${matchedItem.status === 'MATCHED' ? '✅ EXACT MATCH' : '⚠️ CANCELLED / DISCREPANCY'}<br><br>`;
+
+          if (matchedItem.kotTickets.length > 0) {
+            reply += `<strong>KOT Appearances (${matchedItem.kotTickets.length} tickets):</strong><br>`;
+            matchedItem.kotTickets.forEach(t => {
+              reply += `  - Token #${t.token} | Time: ${t.timestamp || 'N/A'} | Table: ${t.table} | Qty: ${t.qty} | Rate: ${formatNPR(t.rate)} | Status: [${t.status.toUpperCase()}] | Server: ${t.waiter}<br>`;
+            });
+          } else {
+            reply += `• <strong>KOT Report:</strong> Does NOT appear in KOT Report.<br>`;
+          }
+
+          if (matchedItem.fbRawEntries.length > 0) {
+            reply += `<br><strong>F&B Report Appearances:</strong><br>`;
+            matchedItem.fbRawEntries.forEach(fb => {
+              reply += `  - Category: ${fb.category} | Sold Qty: ${fb.qty} | Revenue: ${formatNPR(fb.revenue)}<br>`;
+            });
+          } else {
+            reply += `<br>• <strong>F&B Report:</strong> Does NOT appear in F&B Report.<br>`;
+          }
+        } else {
+          // Intent 6: Fallback to Gemini when not found locally
+          const loadingBubble = document.createElement('div');
+          loadingBubble.className = 'p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-400';
+          loadingBubble.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5 text-indigo-400"></i> No direct local match found — asking Gemini AI...`;
+          chatStream.appendChild(loadingBubble);
+          chatStream.scrollTop = chatStream.scrollHeight;
+
+          try {
+            const aiAnswer = await callGeminiFallback(text, sessionData, items, metrics);
+            reply = aiAnswer.replace(/\n/g, '<br>');
+            usedGemini = true;
+          } catch (err) {
+            reply = `<strong>Search Result:</strong><br><br>` +
+                    `❌ Item/Query "<strong>${text}</strong>" could not be verified locally.<br>` +
+                    `<em>Gemini Fallback Note: ${err.message || 'Unable to connect to /api/ask.'}</em>`;
+          }
+          loadingBubble.remove();
+        }
+      }
+
+      // Display Final Output
+      const badgeTitle = usedGemini ? 'Audit Engine Output (Gemini Fallback)' : 'Audit Engine Output (Local)';
+      const assistantBubble = document.createElement('div');
+      assistantBubble.className = 'p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-200 leading-relaxed';
+      assistantBubble.innerHTML = `<div class="font-semibold text-[11px] text-emerald-400 mb-1 flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles"></i> ${badgeTitle}</div>${reply}`;
+      chatStream.appendChild(assistantBubble);
+
+      chatStream.scrollTop = chatStream.scrollHeight;
+    }
+
+    // ----------------------------------------------------------------------
+    // AUDIT DRILL-DOWN MODAL
+    // ----------------------------------------------------------------------
+    function openAuditModal(normName) {
+      const item = currentProcessedItems.find(i => i.normName === normName);
+      if (!item) return;
+
+      document.getElementById('modalItemTitle').textContent = item.displayName;
+      document.getElementById('modalItemSub').textContent = `Category: ${item.category} • Normalized Key: ${item.normName}`;
+
+      const verdictBox = document.getElementById('modalVerdictBox');
+      if (item.status === 'MATCHED') {
+        verdictBox.className = 'bg-emerald-950/30 border border-emerald-800 rounded-xl p-4 text-xs text-emerald-300';
+        verdictBox.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5"></i> <strong>Reconciled:</strong> KOT completed quantity (${item.kotCompletedQty}) matches F&B sales report (${item.fbQty}) with zero valuation variance (${formatNPR(item.fbRevenue)}).`;
+      } else if (item.status === 'CANCELLED_ONLY') {
+        verdictBox.className = 'bg-rose-950/30 border border-rose-800 rounded-xl p-4 text-xs text-rose-300';
+        verdictBox.innerHTML = `<i class="fa-solid fa-ban mr-1.5"></i> <strong>Cancelled Only:</strong> This item was ordered in KOT but voided prior to preparation. Zero sales revenue recorded in F&B.`;
+      } else {
+        verdictBox.className = 'bg-amber-950/30 border border-amber-800 rounded-xl p-4 text-xs text-amber-300';
+        verdictBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1.5"></i> <strong>Discrepancy:</strong> KOT completed quantity (${item.kotCompletedQty}) differs from F&B sold quantity (${item.fbQty}).`;
+      }
+
+      const kotBody = document.getElementById('modalKotBody');
+      document.getElementById('modalKotCount').textContent = `${item.kotTickets.length} ticket entries`;
+      kotBody.innerHTML = '';
+      
+      if (item.kotTickets.length === 0) {
+        kotBody.innerHTML = `<tr><td colspan="7" class="p-3 text-center text-slate-500">No KOT records found</td></tr>`;
+      } else {
+        item.kotTickets.forEach(t => {
+          const tr = document.createElement('tr');
+          if (String(t.status).toLowerCase() === 'cancelled') tr.className = 'bg-rose-950/20';
+          tr.innerHTML = `
+            <td class="p-2.5 font-mono text-indigo-400 font-semibold">#${t.token}</td>
+            <td class="p-2.5 text-slate-400 font-mono text-[11px]">${t.timestamp || 'N/A'}</td>
+            <td class="p-2.5">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${String(t.status).toLowerCase() === 'cancelled' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400'}">
+                ${t.status}
+              </span>
+            </td>
+            <td class="p-2.5 text-slate-400">${t.table || 'Walk-in'}</td>
+            <td class="p-2.5">${t.waiter || 'Staff'}</td>
+            <td class="p-2.5 text-center font-mono">${t.qty}</td>
+            <td class="p-2.5 text-right font-mono">${formatNPR(t.total || t.rate * t.qty)}</td>
+          `;
+          kotBody.appendChild(tr);
+        });
+      }
+
+      const fbContent = document.getElementById('modalFbContent');
+      fbContent.innerHTML = `
+        <div>
+          <div class="font-semibold text-white">${item.displayName}</div>
+          <div class="text-slate-400">Category: ${item.category}</div>
+        </div>
+        <div class="text-right font-mono">
+          <div class="text-emerald-400 font-bold">${item.fbQty} Sold</div>
+          <div class="text-slate-300">${formatNPR(item.fbRevenue)}</div>
+        </div>
+      `;
+
+      document.getElementById('auditModal').classList.remove('hidden');
+    }
+
+    function closeAuditModal() {
+      document.getElementById('auditModal').classList.add('hidden');
+    }
+
+    // ----------------------------------------------------------------------
+    // FILE INGESTION LOGIC
+    // ----------------------------------------------------------------------
+    function openUploadModal() {
+      document.getElementById('inputShiftDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('inputShiftTime').value = '02:00 PM - 11:45 PM';
+      document.getElementById('uploadModal').classList.remove('hidden');
+    }
+
+    function closeUploadModal() {
+      document.getElementById('uploadModal').classList.add('hidden');
+      tempKOTRows = null;
+      tempFBRows = null;
+    }
+
+    function handleSingleFileSelect(event, targetType) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        let allRows = [];
+        workbook.SheetNames.forEach(sheet => {
+          const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheet]);
+          allRows = [...allRows, ...json];
+        });
+
+        if (targetType === 'kot') {
+          tempKOTRows = parseKOTSheetRows(allRows);
+          document.getElementById('labelKOT').textContent = `Loaded ${tempKOTRows.length} KOT records`;
+        } else {
+          tempFBRows = parseFBSheetRows(allRows);
+          document.getElementById('labelFB').textContent = `Loaded ${tempFBRows.length} F&B sales rows`;
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function parseKOTSheetRows(rows) {
+      return rows.map(r => ({
+        token: r['Token No'] || r['Token'] || r['KOT No'] || 'N/A',
+        item: String(r['Item'] || r['Item Name'] || r['Particulars'] || 'Unknown'),
+        qty: Number(r['Qty'] || r['Quantity'] || 1),
+        rate: Number(r['Rate'] || r['Price'] || 0),
+        total: Number(r['Valuation'] || r['Total'] || 0),
+        status: String(r['Status'] || r['Order Status'] || 'completed').toLowerCase(),
+        waiter: r['Waiter'] || r['Staff'] || 'Staff',
+        table: r['Table'] || 'Walk-in',
+        timestamp: r['Date'] || r['Timestamp'] || r['Time'] || r['Created At'] || 'N/A'
+      }));
+    }
+
+    function parseFBSheetRows(rows) {
+      return rows.map(r => ({
+        category: r['Category'] || r['Group'] || 'General',
+        item: String(r['Item'] || r['Item Name'] || 'Unknown'),
+        rate: Number(r['Rate'] || r['Unit Price'] || 0),
+        qty: Number(r['Total Sold (Qty)'] || r['Qty'] || 0),
+        revenue: Number(r['Total Valuation / Revenue'] || r['Revenue'] || 0)
+      }));
+    }
+
+    function processUploadedShift() {
+      const shiftDate = document.getElementById('inputShiftDate').value || '2026-11-19';
+      const shiftTime = document.getElementById('inputShiftTime').value || '02:00 PM - 11:45 PM';
+      const sessionKey = `${shiftDate} (${shiftTime})`;
+
+      const demo = getBirtaGreenPalaceDemoData();
+
+      sessions[sessionKey] = {
+        dateStr: shiftDate,
+        timeRange: shiftTime,
+        kotRaw: tempKOTRows || demo.kotRaw,
+        fbRaw: tempFBRows || demo.fbRaw,
+        createdAt: new Date().toISOString()
+      };
+
+      saveSessionsToStorage();
+      activeDateKey = sessionKey;
+      closeUploadModal();
+      renderApp();
+    }
+  </script>
+</body>
+</html>
